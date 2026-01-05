@@ -185,7 +185,7 @@ async function addToFavorites(tab) {
     // Notify sidepanel to update
     notifySidepanelUpdate();
   } catch (error) {
-    console.error('Error adding to favorites:', error);
+    // Silent fail on adding to favorites
   }
 }
 
@@ -197,7 +197,7 @@ async function pinTabToWorkspace(tab, workspaceId) {
     const tabMapping = data.tabMapping || {};
 
     if (!workspaces[workspaceId]) {
-      console.error('Workspace not found:', workspaceId);
+      // Workspace not found
       return;
     }
 
@@ -242,7 +242,7 @@ async function pinTabToWorkspace(tab, workspaceId) {
     // Notify sidepanel to update
     notifySidepanelUpdate();
   } catch (error) {
-    console.error('Error pinning tab to workspace:', error);
+    // Silent fail on pinning tab
   }
 }
 
@@ -305,7 +305,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
     }
     notifySidepanelUpdate();
   } catch (error) {
-    console.error('Error handling tab removal:', error);
+    // Silent fail on tab removal handling
   }
 });
 
@@ -391,7 +391,7 @@ async function updateTabMapping(pinnedTabId, favoriteId, chromeTabId) {
 
     await chrome.storage.local.set({ workspaces, favorites, tabMapping });
   } catch (error) {
-    console.error('Error updating tab mapping:', error);
+    // Silent fail on tab mapping update
   }
 }
 

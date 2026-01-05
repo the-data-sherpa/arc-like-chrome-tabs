@@ -142,7 +142,7 @@ async function loadData() {
       });
     });
   } catch (error) {
-    console.error('Error loading data:', error);
+    // Silent fail - data will use defaults
   }
 }
 
@@ -158,7 +158,7 @@ async function loadChromeTabs() {
       activeTabId = activeTabs[0].id;
     }
   } catch (error) {
-    console.error('Error loading Chrome tabs:', error);
+    // Silent fail - will retry on next update
   }
 }
 
@@ -812,7 +812,7 @@ async function closeTabFromContext(target, type) {
     try {
       await chrome.tabs.remove(tabId);
     } catch (error) {
-      console.error('Error closing tab:', error);
+      // Tab may already be closed
     }
   }
 }
@@ -825,7 +825,7 @@ async function removeTabFromContext(target, type) {
       try {
         await chrome.tabs.remove(target.tabId);
       } catch (error) {
-        console.error('Error closing tab:', error);
+        // Tab may already be closed
       }
     }
   } else if (type === 'pinned') {
@@ -1456,7 +1456,7 @@ async function handleTabClick(item, type, itemId) {
       renderUI();
     }
   } catch (error) {
-    console.error('Error handling tab click:', error.message);
+    // Silent fail on tab click
   }
 }
 
@@ -1491,7 +1491,7 @@ async function updateItemChromeTabId(item, type, itemId, newChromeTabId) {
     }
     await chrome.storage.local.set({ tabMapping });
   } catch (error) {
-    console.error('Error updating chromeTabId:', error);
+    // Silent fail on chromeTabId update
   }
 }
 
@@ -1500,7 +1500,7 @@ async function closeTab(tabId) {
   try {
     await chrome.tabs.remove(tabId);
   } catch (error) {
-    console.error('Error closing tab:', error);
+    // Tab may already be closed
   }
 }
 
@@ -1532,7 +1532,7 @@ async function removeTab(itemId, type) {
     }
     renderUI();
   } catch (error) {
-    console.error('Error removing tab:', error);
+    // Silent fail on tab removal
   }
 }
 
@@ -1568,7 +1568,7 @@ async function createWorkspace(name) {
     await loadChromeTabs();
     renderUI();
   } catch (error) {
-    console.error('Error creating workspace:', error);
+    // Silent fail on workspace creation
   }
 }
 
@@ -2367,7 +2367,7 @@ function setupImportListeners() {
       updateImportPreview();
       importModal.classList.remove('hidden');
     } catch (error) {
-      console.error('Error reading bookmark file:', error);
+      // Error reading bookmark file
       alert('Error reading bookmark file. Please make sure it is a valid HTML bookmark file.');
     }
 
@@ -2524,7 +2524,7 @@ function parseNetscapeBookmarks(htmlContent) {
   // Find the main DL element (bookmark list)
   const mainDL = doc.querySelector('body > dl') || doc.querySelector('dl');
   if (!mainDL) {
-    console.error('No bookmark list found in file');
+    // No bookmark list found in file
     return result;
   }
 
@@ -2727,7 +2727,7 @@ async function importBookmarks(bookmarks, target) {
     chrome.runtime.sendMessage({ type: 'workspaceCreated' });
     
   } catch (error) {
-    console.error('Error importing bookmarks:', error);
+    // Error importing bookmarks
     alert('Error importing bookmarks: ' + error.message);
   }
 }
@@ -3154,7 +3154,7 @@ async function switchWorkspace(newWorkspaceId) {
     renderUI();
     
   } catch (error) {
-    console.error('Error switching workspace:', error);
+    // Error during workspace switch
   } finally {
     isSwitchingWorkspace = false;
   }

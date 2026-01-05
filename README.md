@@ -1,123 +1,113 @@
-# ARC-like Chrome Tabs Extension
+# ARC-like Chrome Tabs
 
-A Chrome extension that mimics ARC browser's vertical tab sidebar with workspaces, pinned tabs, and favorites. Pinned tabs remember their initial saved state, so they always return to the URL they were pinned from, even after navigation.
+A Chrome extension that brings ARC browser's innovative vertical tab management to Google Chrome. Organize your browsing with workspaces, pinned tabs, and favorites.
 
-## Features
+![Chrome Web Store](https://img.shields.io/badge/Chrome-Extension-green)
+![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
 
-- **Vertical Sidebar**: Clean, modern vertical tab interface
-- **Workspaces**: Organize tabs into different workspaces
-- **Pinned Tabs**: Pin tabs to workspaces - they remember their initial URL state
-- **Favorites**: Global favorites pinned at the top of the sidebar
-- **Tab Highlighting**: Active tab is highlighted in the sidebar
-- **Smart Close Buttons**: 
-  - `-` icon when tab is open (closes the Chrome tab)
-  - `x` icon when tab is closed (removes pinned tab/favorite)
-- **One-to-One Mapping**: Each pinned tab maps to one Chrome tab
+## ✨ Features
 
-## Installation
+### 🗂️ Workspaces
+- Create multiple workspaces to organize tabs by project or context
+- Workspace isolation - tabs are exclusive to their workspace
+- Rename and delete workspaces with ease
+- Quick workspace switching from dropdown
 
-### Step 1: Load the Extension
+### 📌 Pinned Tabs
+- Pin important tabs to keep them organized
+- Pinned tabs remember their saved URL - always return to where you started
+- Organize pinned tabs into folders
+- Folders show open tabs even when collapsed
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** (toggle in the top-right corner)
-3. Click **Load unpacked**
-4. Select the `arc-like-chrome-tabs` folder
-5. The extension should now appear in your extensions list
+### ⭐ Favorites Bar
+- Up to 8 favorite sites displayed as square favicon buttons
+- Favorites persist across all workspaces
+- Quick access to your most-used sites
 
-### Step 2: Open the Sidebar
+### 📥 Import Bookmarks
+- Import bookmarks from HTML bookmark files
+- Create workspaces from bookmark folders
+- Preserve folder structure during import
 
-1. Click the extension icon in the Chrome toolbar
-2. The sidebar will open on the right side of your browser
+### 🎨 Modern UI
+- Clean, dark theme sidebar
+- Visual indicators for active and open tabs
+- Drag and drop to organize tabs
+- Right-click context menus for quick actions
 
-## Usage
+## 📦 Installation
 
-### Creating a Workspace
+### From Chrome Web Store (Recommended)
+*Coming soon*
 
-1. Click the `+` button next to the workspace selector
-2. Enter a workspace name
-3. Click "Confirm"
+### Manual Installation (Developer Mode)
 
-### Pinning a Tab
+1. Download or clone this repository
+2. Open Chrome and navigate to `chrome://extensions/`
+3. Enable **Developer mode** (toggle in top-right corner)
+4. Click **Load unpacked**
+5. Select the extension folder
+6. Click the extension icon to open the sidebar
 
-1. Right-click on any Chrome tab
-2. Select "Pin Tab" → "Pin to [Workspace Name]"
-3. The tab will appear in the Pinned Tabs section
+## 🚀 Quick Start
 
-### Adding to Favorites
+1. **Open the sidebar** - Click the extension icon or use `Ctrl+Shift+E` (Mac: `Cmd+Shift+E`)
+2. **Create a workspace** - Click the `+` button next to the workspace dropdown
+3. **Pin a tab** - Right-click any tab in the sidebar → "Pin to Current Workspace"
+4. **Add to favorites** - Right-click any tab → "Add to Favorites"
 
-1. Right-click on any Chrome tab
-2. Select "Pin Tab" → "Add to Favorites"
-3. The tab will appear in the Favorites section at the top
+## 📖 Usage Guide
 
-### Using Pinned Tabs
+### Tab Management
+| Action | Result |
+|--------|--------|
+| Click pinned/favorite tab | Opens or activates the tab |
+| `-` button (on open tab) | Closes the Chrome tab |
+| `×` button (on closed tab) | Removes from pinned/favorites |
 
-- **Click a pinned tab**: 
-  - If open: Activates the existing Chrome tab
-  - If closed: Opens a new tab with the saved URL
-- **Close button (`-`)**: Closes the Chrome tab (pinned tab remains)
-- **Remove button (`x`)**: Removes the pinned tab from the workspace
+### Keyboard Shortcut
+- `Ctrl+Shift+E` / `Cmd+Shift+E` - Toggle sidebar
 
-### Tab Behavior
+### Context Menu Options
+- **Pin to Current Workspace** - Add tab to pinned tabs
+- **Add to Favorites** - Add to favorites bar
+- **Move to Folder** - Organize pinned tabs into folders
+- **Update Saved URL** - Change the URL a pinned tab returns to
+- **Close Tab** - Close the Chrome tab
+- **Remove from List** - Remove pinned tab or favorite
 
-- Pinned tabs remember their **initial saved URL** (the URL when they were pinned)
-- Even if you navigate away from a pinned tab, closing and reopening it will return to the saved URL
-- The active Chrome tab is highlighted in the sidebar
-- All Chrome tabs (pinned and normal) are displayed in the sidebar
+## 🛠️ Technical Details
 
-## File Structure
+- **Manifest Version**: 3 (latest Chrome extension standard)
+- **Permissions**: 
+  - `tabs` - Tab management
+  - `storage` - Save workspaces and preferences
+  - `contextMenus` - Right-click menus
+  - `sidePanel` - Sidebar UI
+- **Storage**: Uses `chrome.storage.local` for data persistence
+
+## 📁 Project Structure
 
 ```
 arc-like-chrome-tabs/
-├── manifest.json          # Extension manifest (V3)
-├── sidepanel.html         # Sidebar UI structure
-├── sidepanel.js           # Sidebar logic and interactions
-├── background.js          # Service worker (context menus, tab tracking)
-├── styles.css             # Modern dark theme styling
+├── manifest.json          # Extension configuration
+├── sidepanel.html         # Sidebar UI
+├── sidepanel.js           # Sidebar logic
+├── background.js          # Service worker
+├── styles.css             # Styling
 ├── icons/                 # Extension icons
-│   ├── icon16.png
-│   ├── icon48.png
-│   └── icon128.png
-├── generate-icons.html    # Tool to generate icons in browser
-└── README.md              # This file
+└── README.md
 ```
 
-## Technical Details
+## 🤝 Contributing
 
-- **Manifest Version**: 3
-- **Storage**: Uses `chrome.storage.local` for persistence
-- **Permissions**: `tabs`, `storage`, `contextMenus`, `sidePanel`
-- **Tab Mapping**: Bidirectional mapping between pinned tabs and Chrome tabs
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Development
+## 📄 License
 
-### Regenerating Icons
+MIT License - feel free to use and modify for your own projects.
 
-If you need to regenerate the icons:
+## 🙏 Acknowledgments
 
-1. **Using ImageMagick** (if installed):
-   ```bash
-   cd icons
-   magick -size 128x128 xc:'#4a9eff' -gravity center -pointsize 80 -fill white -font Arial-Bold -annotate +0+0 'A' icon128.png
-   magick icon128.png -resize 48x48 icon48.png
-   magick icon128.png -resize 16x16 icon16.png
-   ```
-
-2. **Using the HTML generator**:
-   - Open `generate-icons.html` in a browser
-   - Click the download buttons for each size
-
-3. **Manual creation**:
-   - Create 16x16, 48x48, and 128x128 PNG images
-   - Place them in the `icons/` directory
-
-## Troubleshooting
-
-- **Sidebar not opening**: Make sure you clicked the extension icon in the toolbar
-- **Context menu not appearing**: Reload the extension after installation
-- **Tabs not saving**: Check that the extension has the required permissions
-- **Icons missing**: The extension will work without icons, but Chrome may show warnings
-
-## License
-
-This extension is provided as-is for personal use.
-
+Inspired by the [Arc Browser](https://arc.net/) by The Browser Company.
