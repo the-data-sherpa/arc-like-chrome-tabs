@@ -625,6 +625,18 @@ body {
   display: none;
 }
 
+/* Open Tabs Preview - shown when folder is collapsed but has open tabs */
+.open-tabs-preview {
+  padding-left: 12px;
+  border-left: 1px solid #4a9eff;
+  margin-left: 16px;
+  background-color: rgba(74, 158, 255, 0.05);
+}
+
+.open-tabs-preview .tab-item {
+  border-radius: 0;
+}
+
 /* Folder Select */
 .folder-select {
   width: 100%;

@@ -13,6 +13,7 @@ let contextMenuType = null;
 
 // Folder state
 let collapsedFolders = new Set();
+let seenFolderIds = new Set(); // Track which folders we've seen to avoid re-collapsing on loadData()
 let folderModalMode = 'create'; // 'create' or 'rename'
 let folderToEdit = null;
 let tabToMove = null;
@@ -96,9 +97,14 @@ async function loadData() {
       if (!workspaces[wsId].openTabsSnapshot) {
         workspaces[wsId].openTabsSnapshot = [];
       }
-      // Collapse all folders by default
+      // Only collapse folders that we haven't seen before (new folders start collapsed)
       workspaces[wsId].folders.forEach(folder => {
-        collapsedFolders.add(folder.id);
+        // Only add to collapsedFolders if we haven't tracked this folder yet
+        // This preserves user's expand/collapse state on subsequent loadData() calls
+        if (!seenFolderIds.has(folder.id)) {
+          seenFolderIds.add(folder.id);
+          collapsedFolders.add(folder.id);
+        }
       });
     });
   } catch (error) {
@@ -789,8 +795,11 @@ function createFolderElement(folder, pinnedTabs) {
   const isCollapsed = collapsedFolders.has(folder.id);
   const tabsInFolder = pinnedTabs.filter(pt => pt.folderId === folder.id);
   
+  // Find all open tabs in this folder (tabs with a valid chromeTabId)
+  const openTabsInFolder = tabsInFolder.filter(pt => pt.chromeTabId !== null && pt.chromeTabId !== undefined);
+  
   const folderItem = document.createElement('div');
-  folderItem.className = `folder-item ${isCollapsed ? 'collapsed' : ''}`;
+  folderItem.className = `folder-item ${isCollapsed ? 'collapsed' : ''} ${openTabsInFolder.length > 0 && isCollapsed ? 'has-open-tabs' : ''}`;
   folderItem.dataset.folderId = folder.id;
 
   // Folder header
@@ -879,6 +888,20 @@ function createFolderElement(folder, pinnedTabs) {
   });
   
   folderItem.appendChild(folderContents);
+  
+  // If folder is collapsed but has open tabs, show those tabs outside the folder contents
+  // This keeps open tabs visible even when the folder is collapsed
+  if (isCollapsed && openTabsInFolder.length > 0) {
+    const openTabsPreview = document.createElement('div');
+    openTabsPreview.className = 'open-tabs-preview';
+    
+    openTabsInFolder.forEach(openTab => {
+      const tabItem = createTabItem(openTab, 'pinned', openTab.id);
+      openTabsPreview.appendChild(tabItem);
+    });
+    
+    folderItem.appendChild(openTabsPreview);
+  }
   
   return folderItem;
 }
