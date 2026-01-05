@@ -26,6 +26,83 @@ body {
   overflow-x: hidden;
 }
 
+/* Favorites Bar - horizontal icon bar at the top */
+.favorites-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #333;
+  min-height: 48px;
+  flex-shrink: 0;
+}
+
+.favorites-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.favorites-empty {
+  color: #444;
+  font-size: 18px;
+  opacity: 0.5;
+  padding: 4px 8px;
+}
+
+.favorite-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background-color: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.favorite-icon-btn:hover {
+  background-color: #3a3a3a;
+  border-color: #505050;
+  transform: scale(1.05);
+}
+
+.favorite-icon-btn.active {
+  background-color: #4a9eff;
+  border-color: #4a9eff;
+}
+
+.favorite-icon-btn.open:not(.active) {
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.3);
+}
+
+.favorite-icon-btn.dragging {
+  opacity: 0.5;
+}
+
+.favorite-icon-btn.drag-over {
+  background-color: rgba(74, 158, 255, 0.2);
+  border-color: #4a9eff;
+}
+
+.favorite-favicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+/* Drop zone styling for favorites bar */
+.favorites-icons.drag-over {
+  background-color: rgba(74, 158, 255, 0.1);
+  border-radius: 6px;
+}
+
 /* Workspace Header */
 .workspace-header {
   display: flex;
