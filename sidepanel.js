@@ -904,14 +904,6 @@ function createTabItem(item, type, itemId) {
   const isOpen = item.chromeTabId !== null && item.chromeTabId !== undefined;
   const isActive = activeTabId === item.chromeTabId;
 
-  console.log('[CREATE TAB ITEM] Creating tab item:', { 
-    title: item.title, 
-    type, 
-    itemId, 
-    isOpen, 
-    chromeTabId: item.chromeTabId,
-    savedUrl: item.savedUrl 
-  });
 
   const tabItem = document.createElement('div');
   tabItem.className = `tab-item ${isActive ? 'active' : ''} ${type}`;
@@ -1003,17 +995,9 @@ function createTabItem(item, type, itemId) {
 
   // Click handler
   tabItem.addEventListener('click', async (e) => {
-    console.log('[TAB CLICK] Event triggered', { 
-      target: e.target.className, 
-      type, 
-      itemId,
-      isCloseBtn: e.target === closeBtn 
-    });
     if (e.target === closeBtn) {
-      console.log('[TAB CLICK] Clicked on close button, ignoring');
       return;
     }
-    console.log('[TAB CLICK] Calling handleTabClick with item:', item);
     await handleTabClick(item, type, itemId);
   });
 
@@ -1098,14 +1082,6 @@ function createChromeTabItem(tab) {
 
 // Handle tab click
 async function handleTabClick(item, type, itemId) {
-  console.log('[HANDLE TAB CLICK] Called with:', { 
-    item, 
-    type, 
-    itemId,
-    chromeTabId: item.chromeTabId,
-    savedUrl: item.savedUrl 
-  });
-  
   try {
     let tabExists = false;
     
@@ -1114,10 +1090,8 @@ async function handleTabClick(item, type, itemId) {
       try {
         const existingTab = await chrome.tabs.get(item.chromeTabId);
         tabExists = !!existingTab;
-        console.log('[HANDLE TAB CLICK] Tab exists check:', tabExists);
       } catch (e) {
         // Tab doesn't exist
-        console.log('[HANDLE TAB CLICK] Tab no longer exists, will open new one');
         tabExists = false;
         
         // Clear the stale chromeTabId
@@ -1128,14 +1102,10 @@ async function handleTabClick(item, type, itemId) {
     
     if (tabExists) {
       // Tab is open, activate it
-      console.log('[HANDLE TAB CLICK] Tab is open, activating chromeTabId:', item.chromeTabId);
       await chrome.tabs.update(item.chromeTabId, { active: true });
-      console.log('[HANDLE TAB CLICK] Tab activated successfully');
     } else {
       // Tab is closed, open it with savedUrl
-      console.log('[HANDLE TAB CLICK] Tab is closed, opening savedUrl:', item.savedUrl);
       const newTab = await chrome.tabs.create({ url: item.savedUrl });
-      console.log('[HANDLE TAB CLICK] New tab created:', newTab.id);
       
       // Update item's chromeTabId
       item.chromeTabId = newTab.id;
@@ -1180,8 +1150,7 @@ async function handleTabClick(item, type, itemId) {
       renderUI();
     }
   } catch (error) {
-    console.error('[HANDLE TAB CLICK] Error:', error);
-    console.error('[HANDLE TAB CLICK] Error details:', error.message, error.stack);
+    console.error('Error handling tab click:', error.message);
   }
 }
 

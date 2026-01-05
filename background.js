@@ -152,7 +152,6 @@ async function addToFavorites(tab) {
     // Check if already in favorites
     const existingIndex = favorites.findIndex(f => f.chromeTabId === tab.id);
     if (existingIndex !== -1) {
-      console.log('Tab already in favorites');
       return;
     }
 
@@ -208,7 +207,6 @@ async function pinTabToWorkspace(tab, workspaceId) {
     // Check if already pinned in this workspace
     const existingIndex = pinnedTabs.findIndex(pt => pt.chromeTabId === tab.id);
     if (existingIndex !== -1) {
-      console.log('Tab already pinned in this workspace');
       return;
     }
 
@@ -404,7 +402,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     await chrome.sidePanel.open({ windowId: tab.windowId });
   } catch (error) {
-    console.log('Could not open side panel:', error.message);
+    // Side panel open may fail silently if already open or other edge cases
   }
 });
 
