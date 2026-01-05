@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabula Store Icon Generator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .preview {
+      margin: 30px 0;
+      text-align: center;
+    }
+    canvas {
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      background: #1a1a1a;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    button {
+      background: #4a9eff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #5aaeff;
+    }
+    .info {
+      background: #e8f4fd;
+      padding: 15px;
+      border-radius: 6px;
+      margin: 20px 0;
+      color: #333;
+    }
+    .info strong {
+      color: #4a9eff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tabula Store Icon Generator</h1>
+    <p class="subtitle">Generate Chrome Web Store promo tile (440×280)</p>
+    
+    <div class="info">
+      <strong>Chrome Web Store Requirements:</strong><br>
+      • Promo Tile: 440×280 pixels (optional but recommended)<br>
+      • Format: PNG<br>
+      • File size: Under 1MB
+    </div>
+    
+    <div class="preview">
+      <canvas id="canvas" width="440" height="280"></canvas>
+    </div>
+    
+    <div class="controls">
+      <button onclick="generateIcon()">Generate Icon</button>
+      <button onclick="downloadIcon()">Download PNG</button>
+    </div>
+    
+    <div class="info">
+      <strong>Design:</strong> Dark theme with "Tabula" text and tab icon representation
+    </div>
+  </div>
+
+  <script>
+    function generateIcon() {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, 440, 280);
+      gradient.addColorStop(0, '#1a1a1a');
+      gradient.addColorStop(1, '#2a2a2a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 440, 280);
+      
+      // Draw tab icon representation (stacked tabs)
+      ctx.fillStyle = '#4a9eff';
+      ctx.strokeStyle = '#5aaeff';
+      ctx.lineWidth = 2;
+      
+      // Tab 1 (back)
+      ctx.beginPath();
+      ctx.roundRect(50, 100, 120, 80, 8);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Tab 2 (middle)
+      ctx.beginPath();
+      ctx.roundRect(80, 80, 120, 80, 8);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Tab 3 (front)
+      ctx.beginPath();
+      ctx.roundRect(110, 60, 120, 80, 8);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Add "T" icon in front tab
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('T', 170, 100);
+      
+      // Tabula text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 42px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Tabula', 260, 120);
+      
+      // Subtitle
+      ctx.fillStyle = '#cccccc';
+      ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Vertical Tab Manager', 260, 160);
+      
+      // Tagline
+      ctx.fillStyle = '#888888';
+      ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Organize your browsing', 260, 190);
+    }
+    
+    // Polyfill for roundRect if needed
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
+        this.beginPath();
+        this.moveTo(x + radius, y);
+        this.lineTo(x + width - radius, y);
+        this.quadraticCurveTo(x + width, y, x + width, y + radius);
+        this.lineTo(x + width, y + height - radius);
+        this.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        this.lineTo(x + radius, y + height);
+        this.quadraticCurveTo(x, y + height, x, y + height - radius);
+        this.lineTo(x, y + radius);
+        this.quadraticCurveTo(x, y, x + radius, y);
+        this.closePath();
+      };
+    }
+    
+    function downloadIcon() {
+      const canvas = document.getElementById('canvas');
+      const link = document.createElement('a');
+      link.download = 'tabula-promo-tile-440x280.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+    
+    // Generate on load
+    window.onload = generateIcon;
+  </script>
+</body>
+</html>
+
