@@ -52,20 +52,15 @@ The sidePanel permission is required to display Tabula's vertical sidebar interf
 
 The sidePanel API is the modern Chrome extension method for displaying persistent sidebar interfaces. Without this permission, Tabula cannot display its main user interface.
 
-### host_permissions (<all_urls>)
+### host_permissions
 
 **Justification:**
-The host_permissions with <all_urls> is required to access tab favicons for display in the sidebar. Tabula displays favicons for:
-- Pinned tabs
-- Favorites
-- Regular tabs in the sidebar
+Tabula does not require host permissions. All tab information, including favicon URLs, is provided by the Chrome tabs API through the tabs permission. The tabs permission provides:
+- Tab metadata (title, URL, favicon URL)
+- Ability to create, update, and close tabs
+- Access to tab information without requiring host permissions
 
-To retrieve favicons, Tabula needs access to the tab's URL information. The <all_urls> permission allows Tabula to access favicon URLs from any website the user visits. This is necessary because:
-- Users may have tabs open from any website
-- Favicons are website-specific and cannot be accessed without host permissions
-- Tabula needs to display accurate favicons to help users identify tabs
-
-Tabula does not access page content, modify pages, or inject scripts. It only accesses tab metadata (URL, title, favicon) provided by the Chrome tabs API. No page content is read or modified.
+Favicons are displayed using the favicon URLs provided by the Chrome tabs API. These URLs are public resources that can be loaded by the browser without host permissions. Tabula does not access page content, modify pages, or inject scripts. It only uses tab metadata provided by the Chrome tabs API.
 
 ### remote code use
 
