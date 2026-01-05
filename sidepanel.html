@@ -8,6 +8,11 @@
 </head>
 <body>
   <div class="sidebar-container">
+    <!-- Favorites Bar - persists across workspaces -->
+    <div class="favorites-bar">
+      <div id="favorites-list" class="favorites-icons"></div>
+    </div>
+
     <!-- Workspace Selector -->
     <div class="workspace-header">
       <select id="workspace-selector" class="workspace-selector">
@@ -19,14 +24,6 @@
     
     <!-- Hidden file input for import -->
     <input type="file" id="import-file-input" accept=".html,.htm" style="display: none;">
-
-    <!-- Favorites Section -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">Favorites</span>
-      </div>
-      <div id="favorites-list" class="tabs-list"></div>
-    </div>
 
     <!-- Pinned Tabs Section -->
     <div class="section">

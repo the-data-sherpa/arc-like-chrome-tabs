@@ -737,14 +737,99 @@ function renderFavorites() {
   }
 
   if (favorites.length === 0) {
-    container.innerHTML = '<div class="empty-state">No favorites yet</div>';
+    // Show a subtle placeholder when no favorites
+    container.innerHTML = '<div class="favorites-empty">★</div>';
     return;
   }
 
   favorites.forEach(favorite => {
-    const tabItem = createTabItem(favorite, 'favorite', favorite.id);
-    container.appendChild(tabItem);
+    const iconBtn = createFavoriteIconButton(favorite);
+    container.appendChild(iconBtn);
   });
+}
+
+// Create square favicon button for favorites bar
+function createFavoriteIconButton(favorite) {
+  const isOpen = favorite.chromeTabId !== null && favorite.chromeTabId !== undefined;
+  const isActive = activeTabId === favorite.chromeTabId;
+  
+  const iconBtn = document.createElement('div');
+  iconBtn.className = `favorite-icon-btn ${isActive ? 'active' : ''} ${isOpen ? 'open' : ''}`;
+  iconBtn.dataset.itemId = favorite.id;
+  iconBtn.title = favorite.title || 'Untitled';
+  
+  // Favicon image
+  const favicon = document.createElement('img');
+  favicon.className = 'favorite-favicon';
+  favicon.src = favorite.favicon || DEFAULT_FAVICON;
+  favicon.alt = '';
+  favicon.onerror = function() {
+    this.src = DEFAULT_FAVICON;
+  };
+  
+  iconBtn.appendChild(favicon);
+  
+  // Make draggable
+  iconBtn.draggable = true;
+  
+  // Drag handlers
+  iconBtn.addEventListener('dragstart', (e) => {
+    draggedItem = iconBtn;
+    draggedType = 'favorite';
+    draggedData = { itemId: favorite.id, item: favorite, type: 'favorite' };
+    iconBtn.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', favorite.id);
+  });
+  
+  iconBtn.addEventListener('dragend', () => {
+    iconBtn.classList.remove('dragging');
+    draggedItem = null;
+    draggedType = null;
+    draggedData = null;
+    clearAllDragOverStates();
+  });
+  
+  iconBtn.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+  
+  iconBtn.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    if (draggedItem !== iconBtn) {
+      iconBtn.classList.add('drag-over');
+    }
+  });
+  
+  iconBtn.addEventListener('dragleave', (e) => {
+    if (!iconBtn.contains(e.relatedTarget)) {
+      iconBtn.classList.remove('drag-over');
+    }
+  });
+  
+  iconBtn.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    iconBtn.classList.remove('drag-over');
+    if (draggedData && draggedItem !== iconBtn) {
+      const dataToProcess = draggedData;
+      draggedData = null;
+      await handleTabDrop(dataToProcess, 'favorite', favorite.id, null);
+    }
+  });
+  
+  // Click handler
+  iconBtn.addEventListener('click', async () => {
+    await handleTabClick(favorite, 'favorite', favorite.id);
+  });
+  
+  // Right-click handler for context menu
+  iconBtn.addEventListener('contextmenu', (e) => {
+    showContextMenu(e, { itemId: favorite.id, chromeTabId: favorite.chromeTabId }, 'favorite');
+  });
+  
+  return iconBtn;
 }
 
 // Render pinned tabs with folders
