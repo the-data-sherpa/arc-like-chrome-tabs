@@ -54,7 +54,6 @@ coverage/
 # Documentation build
 docs/_build/
 
-# Unofficial Chrome Web Store documentation (not for public repo)
-CHROME_STORE_DESCRIPTION.md
-CHROME_STORE_SUBMISSION.md
-PRIVACY_PRACTICES.md
+# Ignore all root-level markdown documentation files (except README.md)
+/*.md
+!README.md
