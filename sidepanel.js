@@ -18,6 +18,11 @@ let folderModalMode = 'create'; // 'create' or 'rename'
 let folderToEdit = null;
 let tabToMove = null;
 
+// Workspace management state
+let workspaceModalMode = 'create'; // 'create' or 'rename'
+let workspaceToEdit = null;
+let workspaceToDelete = null;
+
 // Import state
 let parsedBookmarks = null;
 let selectedImportFolders = new Set();
@@ -279,9 +284,52 @@ function setupEventListeners() {
     }
   });
 
+  // Right-click on workspace selector for context menu
+  workspaceSelector.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (currentWorkspace && workspaces[currentWorkspace]) {
+      showWorkspaceContextMenu(e);
+    }
+  });
+
   // Add workspace button
   const addWorkspaceBtn = document.getElementById('add-workspace-btn');
   addWorkspaceBtn.addEventListener('click', showAddWorkspaceModal);
+
+  // Workspace context menu
+  const workspaceContextMenu = document.getElementById('workspace-context-menu');
+  workspaceContextMenu.addEventListener('click', async (e) => {
+    const action = e.target.dataset.action;
+    if (!action) return;
+    
+    await handleWorkspaceContextMenuAction(action);
+    hideWorkspaceContextMenu();
+  });
+
+  // Delete workspace modal
+  const deleteWorkspaceModal = document.getElementById('delete-workspace-modal');
+  const deleteWorkspaceCancelBtn = document.getElementById('delete-workspace-cancel-btn');
+  const deleteWorkspaceConfirmBtn = document.getElementById('delete-workspace-confirm-btn');
+
+  deleteWorkspaceCancelBtn.addEventListener('click', () => {
+    deleteWorkspaceModal.classList.add('hidden');
+    workspaceToDelete = null;
+  });
+
+  deleteWorkspaceConfirmBtn.addEventListener('click', async () => {
+    if (workspaceToDelete) {
+      await deleteWorkspace(workspaceToDelete);
+      deleteWorkspaceModal.classList.add('hidden');
+      workspaceToDelete = null;
+    }
+  });
+
+  deleteWorkspaceModal.addEventListener('click', (e) => {
+    if (e.target === deleteWorkspaceModal) {
+      deleteWorkspaceModal.classList.add('hidden');
+      workspaceToDelete = null;
+    }
+  });
 
   // Modal buttons
   const modalCancelBtn = document.getElementById('modal-cancel-btn');
@@ -297,9 +345,14 @@ function setupEventListeners() {
   modalConfirmBtn.addEventListener('click', async () => {
     const name = workspaceNameInput.value.trim();
     if (name) {
-      await createWorkspace(name);
+      if (workspaceModalMode === 'create') {
+        await createWorkspace(name);
+      } else if (workspaceModalMode === 'rename' && workspaceToEdit) {
+        await renameWorkspace(workspaceToEdit, name);
+      }
       modal.classList.add('hidden');
       workspaceNameInput.value = '';
+      workspaceToEdit = null;
     }
   });
 
@@ -462,6 +515,9 @@ function hideContextMenu() {
   
   // Also hide folder context menu
   hideFolderContextMenu();
+  
+  // Also hide workspace context menu
+  hideWorkspaceContextMenu();
 }
 
 // Update context menu items based on tab type
@@ -1521,11 +1577,146 @@ function showAddWorkspaceModal() {
   const modal = document.getElementById('workspace-modal');
   const modalTitle = document.getElementById('modal-title');
   const workspaceNameInput = document.getElementById('workspace-name-input');
+  const confirmBtn = document.getElementById('modal-confirm-btn');
   
+  workspaceModalMode = 'create';
+  workspaceToEdit = null;
   modalTitle.textContent = 'Add Workspace';
+  confirmBtn.textContent = 'Create';
   workspaceNameInput.value = '';
   modal.classList.remove('hidden');
   workspaceNameInput.focus();
+}
+
+// Show rename workspace modal
+function showRenameWorkspaceModal() {
+  if (!currentWorkspace || !workspaces[currentWorkspace]) return;
+  
+  const modal = document.getElementById('workspace-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const workspaceNameInput = document.getElementById('workspace-name-input');
+  const confirmBtn = document.getElementById('modal-confirm-btn');
+  
+  workspaceModalMode = 'rename';
+  workspaceToEdit = currentWorkspace;
+  modalTitle.textContent = 'Rename Workspace';
+  confirmBtn.textContent = 'Rename';
+  workspaceNameInput.value = workspaces[currentWorkspace].name;
+  modal.classList.remove('hidden');
+  workspaceNameInput.focus();
+  workspaceNameInput.select();
+}
+
+// Show workspace context menu
+function showWorkspaceContextMenu(e) {
+  const contextMenu = document.getElementById('workspace-context-menu');
+  
+  const x = e.clientX;
+  const y = e.clientY;
+  
+  contextMenu.style.left = `${x}px`;
+  contextMenu.style.top = `${y}px`;
+  contextMenu.classList.remove('hidden');
+  
+  // Adjust position if menu goes off screen
+  const menuRect = contextMenu.getBoundingClientRect();
+  if (menuRect.right > window.innerWidth) {
+    contextMenu.style.left = `${x - menuRect.width}px`;
+  }
+  if (menuRect.bottom > window.innerHeight) {
+    contextMenu.style.top = `${y - menuRect.height}px`;
+  }
+}
+
+// Hide workspace context menu
+function hideWorkspaceContextMenu() {
+  const contextMenu = document.getElementById('workspace-context-menu');
+  contextMenu.classList.add('hidden');
+}
+
+// Handle workspace context menu action
+async function handleWorkspaceContextMenuAction(action) {
+  switch (action) {
+    case 'rename-workspace':
+      showRenameWorkspaceModal();
+      break;
+    case 'delete-workspace':
+      showDeleteWorkspaceModal();
+      break;
+  }
+}
+
+// Show delete workspace confirmation modal
+function showDeleteWorkspaceModal() {
+  if (!currentWorkspace || !workspaces[currentWorkspace]) return;
+  
+  const modal = document.getElementById('delete-workspace-modal');
+  const workspaceName = document.getElementById('delete-workspace-name');
+  
+  workspaceToDelete = currentWorkspace;
+  workspaceName.textContent = workspaces[currentWorkspace].name;
+  modal.classList.remove('hidden');
+}
+
+// Rename workspace
+async function renameWorkspace(workspaceId, newName) {
+  if (!workspaceId || !workspaces[workspaceId]) return;
+  
+  workspaces[workspaceId].name = newName;
+  await chrome.storage.local.set({ workspaces });
+  
+  // Update context menus in background
+  chrome.runtime.sendMessage({ type: 'workspaceCreated' });
+  
+  renderUI();
+}
+
+// Delete workspace
+async function deleteWorkspace(workspaceId) {
+  if (!workspaceId || !workspaces[workspaceId]) return;
+  
+  const workspace = workspaces[workspaceId];
+  
+  // Close all Chrome tabs associated with pinned tabs in this workspace
+  const pinnedTabs = workspace.pinnedTabs || [];
+  for (const pinnedTab of pinnedTabs) {
+    if (pinnedTab.chromeTabId) {
+      try {
+        await chrome.tabs.remove(pinnedTab.chromeTabId);
+      } catch (e) {
+        // Tab might already be closed
+      }
+      // Remove from tab mapping
+      delete tabMapping[pinnedTab.chromeTabId];
+    }
+  }
+  
+  // Remove workspace
+  delete workspaces[workspaceId];
+  
+  // If this was the current workspace, switch to another or clear
+  if (currentWorkspace === workspaceId) {
+    const remainingWorkspaces = Object.keys(workspaces);
+    if (remainingWorkspaces.length > 0) {
+      currentWorkspace = remainingWorkspaces[0];
+    } else {
+      currentWorkspace = '';
+    }
+  }
+  
+  // Remove from seenFolderIds
+  (workspace.folders || []).forEach(folder => {
+    seenFolderIds.delete(folder.id);
+    collapsedFolders.delete(folder.id);
+  });
+  
+  await chrome.storage.local.set({ workspaces, currentWorkspace, tabMapping });
+  
+  // Update context menus in background
+  chrome.runtime.sendMessage({ type: 'workspaceCreated' });
+  
+  await loadChromeTabs();
+  renderUI();
 }
 
 // ========== FOLDER FUNCTIONS ==========

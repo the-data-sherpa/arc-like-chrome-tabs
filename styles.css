@@ -407,6 +407,27 @@ body {
   background-color: #5aaeff;
 }
 
+.modal-btn.danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.modal-btn.danger:hover {
+  background-color: #c82333;
+}
+
+.delete-warning {
+  color: #ccc;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.delete-warning span {
+  color: #fff;
+  font-weight: 600;
+}
+
 /* Import Modal Styles */
 .import-modal-content {
   width: 350px;
