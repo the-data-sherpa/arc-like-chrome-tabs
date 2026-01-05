@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tabula Store Icon Generator</title>
+  <title>Tabula Chrome Web Store Icon Generator</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 800px;
+      max-width: 1200px;
       margin: 40px auto;
       padding: 20px;
       background: #f5f5f5;
@@ -26,17 +26,32 @@
       color: #666;
       margin-bottom: 30px;
     }
+    .icon-section {
+      margin: 40px 0;
+      padding: 20px;
+      background: #fafafa;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+    .icon-section h2 {
+      color: #333;
+      margin-top: 0;
+      font-size: 20px;
+    }
     .preview {
-      margin: 30px 0;
+      margin: 20px 0;
       text-align: center;
     }
     canvas {
       border: 2px solid #ddd;
       border-radius: 4px;
       background: #1a1a1a;
+      display: block;
+      margin: 0 auto;
     }
     .controls {
       margin: 20px 0;
+      text-align: center;
     }
     button {
       background: #4a9eff;
@@ -51,104 +66,255 @@
     button:hover {
       background: #5aaeff;
     }
+    button.download-all {
+      background: #28a745;
+      font-size: 18px;
+      padding: 14px 28px;
+      margin-top: 30px;
+    }
+    button.download-all:hover {
+      background: #34ce57;
+    }
     .info {
       background: #e8f4fd;
       padding: 15px;
       border-radius: 6px;
       margin: 20px 0;
       color: #333;
+      font-size: 14px;
     }
     .info strong {
       color: #4a9eff;
+    }
+    .info a {
+      color: #4a9eff;
+      text-decoration: none;
+    }
+    .info a:hover {
+      text-decoration: underline;
+    }
+    .requirement {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 10px 15px;
+      margin: 10px 0;
+    }
+    .requirement strong {
+      color: #856404;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Tabula Store Icon Generator</h1>
-    <p class="subtitle">Generate Chrome Web Store promo tile (440×280)</p>
+    <h1>Tabula Chrome Web Store Icon Generator</h1>
+    <p class="subtitle">Generate all required icons for Chrome Web Store submission</p>
     
     <div class="info">
       <strong>Chrome Web Store Requirements:</strong><br>
-      • Small Promo Tile: 440×280 pixels (REQUIRED)<br>
-      • Format: JPEG or 24-bit PNG (no alpha channel)<br>
-      • File size: Under 1MB<br>
+      • Store Icon: 128×128 (96×96 artwork + 16px transparent padding)<br>
+      • Small Promo Tile: 440×280 (REQUIRED)<br>
+      • Marquee Promo Tile: 1400×560 (optional, for featured placement)<br>
+      • Format: PNG (24-bit, no alpha for promo tiles)<br>
       • <a href="https://developer.chrome.com/webstore/images#icons" target="_blank">Official Guidelines</a>
     </div>
-    
-    <div class="preview">
-      <canvas id="canvas" width="440" height="280"></canvas>
+
+    <!-- Store Icon -->
+    <div class="icon-section">
+      <h2>1. Store Icon (128×128)</h2>
+      <div class="requirement">
+        <strong>Required:</strong> Artwork should be 96×96 pixels centered with 16px transparent padding
+      </div>
+      <div class="preview">
+        <canvas id="storeIcon" width="128" height="128"></canvas>
+      </div>
+      <div class="controls">
+        <button onclick="generateStoreIcon()">Generate Store Icon</button>
+        <button onclick="downloadStoreIcon()">Download PNG</button>
+      </div>
     </div>
-    
+
+    <!-- Small Promo Tile -->
+    <div class="icon-section">
+      <h2>2. Small Promo Tile (440×280) - REQUIRED</h2>
+      <div class="requirement">
+        <strong>Required:</strong> Extensions without this appear after those with it
+      </div>
+      <div class="preview">
+        <canvas id="smallPromo" width="440" height="280"></canvas>
+      </div>
+      <div class="controls">
+        <button onclick="generateSmallPromo()">Generate Small Promo</button>
+        <button onclick="downloadSmallPromo()">Download PNG</button>
+      </div>
+    </div>
+
+    <!-- Marquee Promo Tile -->
+    <div class="icon-section">
+      <h2>3. Marquee Promo Tile (1400×560) - Optional</h2>
+      <div class="requirement">
+        <strong>Optional:</strong> For featured placement in Chrome Web Store
+      </div>
+      <div class="preview">
+        <canvas id="marqueePromo" width="1400" height="560"></canvas>
+      </div>
+      <div class="controls">
+        <button onclick="generateMarqueePromo()">Generate Marquee Promo</button>
+        <button onclick="downloadMarqueePromo()">Download PNG</button>
+      </div>
+    </div>
+
+    <!-- Download All -->
     <div class="controls">
-      <button onclick="generateIcon()">Generate Icon</button>
-      <button onclick="downloadIcon()">Download PNG</button>
-    </div>
-    
-    <div class="info">
-      <strong>Design:</strong> Dark theme with "Tabula" text and tab icon representation
+      <button class="download-all" onclick="downloadAll()">Download All Icons</button>
     </div>
   </div>
 
   <script>
-    function generateIcon() {
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
+    // Tabula brand colors
+    const BRAND_COLORS = {
+      primary: '#4a9eff',
+      primaryLight: '#5aaeff',
+      darkBg: '#1a1a1a',
+      darkBgLight: '#2a2a2a',
+      white: '#ffffff',
+      gray: '#cccccc',
+      grayDark: '#888888'
+    };
+
+    // Draw Tabula "T" logo
+    function drawTabulaLogo(ctx, x, y, size) {
+      const centerX = x + size / 2;
+      const centerY = y + size / 2;
       
-      // Background gradient
-      const gradient = ctx.createLinearGradient(0, 0, 440, 280);
-      gradient.addColorStop(0, '#1a1a1a');
-      gradient.addColorStop(1, '#2a2a2a');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 440, 280);
-      
-      // Draw tab icon representation (stacked tabs)
-      ctx.fillStyle = '#4a9eff';
-      ctx.strokeStyle = '#5aaeff';
+      // Draw stacked tabs background
+      ctx.fillStyle = BRAND_COLORS.primary;
+      ctx.strokeStyle = BRAND_COLORS.primaryLight;
       ctx.lineWidth = 2;
       
       // Tab 1 (back)
       ctx.beginPath();
-      ctx.roundRect(50, 100, 120, 80, 8);
+      ctx.roundRect(x + size * 0.1, y + size * 0.3, size * 0.4, size * 0.35, size * 0.05);
       ctx.fill();
       ctx.stroke();
       
       // Tab 2 (middle)
       ctx.beginPath();
-      ctx.roundRect(80, 80, 120, 80, 8);
+      ctx.roundRect(x + size * 0.2, y + size * 0.2, size * 0.4, size * 0.35, size * 0.05);
       ctx.fill();
       ctx.stroke();
       
       // Tab 3 (front)
       ctx.beginPath();
-      ctx.roundRect(110, 60, 120, 80, 8);
+      ctx.roundRect(x + size * 0.3, y + size * 0.1, size * 0.4, size * 0.35, size * 0.05);
       ctx.fill();
       ctx.stroke();
       
-      // Add "T" icon in front tab
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 48px Arial';
+      // Draw "T" in front tab
+      ctx.fillStyle = BRAND_COLORS.white;
+      ctx.font = `bold ${size * 0.3}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('T', 170, 100);
+      ctx.fillText('T', centerX, centerY);
+    }
+
+    // Generate Store Icon (128×128)
+    function generateStoreIcon() {
+      const canvas = document.getElementById('storeIcon');
+      const ctx = canvas.getContext('2d');
+      
+      // Clear canvas (transparent background for 16px padding)
+      ctx.clearRect(0, 0, 128, 128);
+      
+      // Draw 96×96 artwork centered (16px transparent padding on all sides)
+      const artworkSize = 96;
+      const padding = 16;
+      const startX = padding;
+      const startY = padding;
+      
+      // Background circle for icon (within 96×96 area)
+      ctx.fillStyle = BRAND_COLORS.primary;
+      ctx.beginPath();
+      ctx.arc(64, 64, 42, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Subtle outer glow for dark backgrounds
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      
+      // Draw Tabula logo
+      drawTabulaLogo(ctx, startX, startY, artworkSize);
+      
+      // Reset shadow
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+    }
+
+    // Generate Small Promo Tile (440×280)
+    function generateSmallPromo() {
+      const canvas = document.getElementById('smallPromo');
+      const ctx = canvas.getContext('2d');
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, 440, 280);
+      gradient.addColorStop(0, BRAND_COLORS.darkBg);
+      gradient.addColorStop(1, BRAND_COLORS.darkBgLight);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 440, 280);
+      
+      // Draw Tabula logo (left side)
+      drawTabulaLogo(ctx, 40, 80, 120);
       
       // Tabula text
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = BRAND_COLORS.white;
       ctx.font = 'bold 42px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('Tabula', 260, 120);
+      ctx.fillText('Tabula', 200, 120);
       
       // Subtitle
-      ctx.fillStyle = '#cccccc';
+      ctx.fillStyle = BRAND_COLORS.gray;
       ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('Vertical Tab Manager', 260, 160);
+      ctx.fillText('Vertical Tab Manager', 200, 160);
       
       // Tagline
-      ctx.fillStyle = '#888888';
+      ctx.fillStyle = BRAND_COLORS.grayDark;
       ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText('Organize your browsing', 260, 190);
+      ctx.fillText('Organize your browsing', 200, 190);
     }
-    
+
+    // Generate Marquee Promo Tile (1400×560)
+    function generateMarqueePromo() {
+      const canvas = document.getElementById('marqueePromo');
+      const ctx = canvas.getContext('2d');
+      
+      // Background gradient
+      const gradient = ctx.createLinearGradient(0, 0, 1400, 560);
+      gradient.addColorStop(0, BRAND_COLORS.darkBg);
+      gradient.addColorStop(1, BRAND_COLORS.darkBgLight);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, 1400, 560);
+      
+      // Draw larger Tabula logo (left side)
+      drawTabulaLogo(ctx, 100, 180, 200);
+      
+      // Tabula text (larger)
+      ctx.fillStyle = BRAND_COLORS.white;
+      ctx.font = 'bold 72px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Tabula', 400, 280);
+      
+      // Subtitle (larger)
+      ctx.fillStyle = BRAND_COLORS.gray;
+      ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Vertical Tab Manager', 400, 340);
+      
+      // Tagline (larger)
+      ctx.fillStyle = BRAND_COLORS.grayDark;
+      ctx.font = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText('Organize your browsing with workspaces, pinned tabs, and favorites', 400, 390);
+    }
+
     // Polyfill for roundRect if needed
     if (!CanvasRenderingContext2D.prototype.roundRect) {
       CanvasRenderingContext2D.prototype.roundRect = function(x, y, width, height, radius) {
@@ -165,22 +331,45 @@
         this.closePath();
       };
     }
-    
-    function downloadIcon() {
-      const canvas = document.getElementById('canvas');
+
+    // Download functions
+    function downloadStoreIcon() {
+      const canvas = document.getElementById('storeIcon');
       const link = document.createElement('a');
-      link.download = 'tabula-promo-tile-440x280.png';
-      // Export as 24-bit PNG (no alpha) - Chrome Web Store requirement
+      link.download = 'tabula-store-icon-128x128.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
-    
-    // Note: Canvas exports PNG without alpha when background is opaque
-    // The dark gradient background ensures no transparency
-    
-    // Generate on load
-    window.onload = generateIcon;
+
+    function downloadSmallPromo() {
+      const canvas = document.getElementById('smallPromo');
+      const link = document.createElement('a');
+      link.download = 'tabula-small-promo-440x280.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function downloadMarqueePromo() {
+      const canvas = document.getElementById('marqueePromo');
+      const link = document.createElement('a');
+      link.download = 'tabula-marquee-promo-1400x560.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function downloadAll() {
+      // Small delay between downloads to ensure they all work
+      downloadStoreIcon();
+      setTimeout(() => downloadSmallPromo(), 200);
+      setTimeout(() => downloadMarqueePromo(), 400);
+    }
+
+    // Generate all on load
+    window.onload = function() {
+      generateStoreIcon();
+      generateSmallPromo();
+      generateMarqueePromo();
+    };
   </script>
 </body>
 </html>
-
