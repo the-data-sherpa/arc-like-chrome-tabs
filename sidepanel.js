@@ -530,16 +530,23 @@ async function pinTab(target, type) {
   let tabInfo;
   
   if (type === 'normal') {
-    // Get tab info from Chrome
-    const tab = allChromeTabs.find(t => t.id === target.tabId);
+    // Get tab info from Chrome - fetch fresh data for accurate favicon
+    let tab = allChromeTabs.find(t => t.id === target.tabId);
     if (!tab) return;
+    
+    // Get fresh tab data to ensure we have the latest favicon
+    try {
+      tab = await chrome.tabs.get(target.tabId);
+    } catch (e) {
+      // Use cached tab if fresh fetch fails
+    }
     
     tabInfo = {
       id: `pin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: tab.title || 'Untitled',
       url: tab.url || '',
       savedUrl: tab.url || '',
-      favicon: getSafeFavicon(tab.url, tab.favIconUrl),
+      favicon: tab.favIconUrl || DEFAULT_FAVICON,
       createdAt: Date.now(),
       chromeTabId: tab.id
     };
@@ -554,12 +561,25 @@ async function pinTab(target, type) {
     const favorite = favorites.find(f => f.id === target.itemId);
     if (!favorite) return;
     
+    // If the favorite has an open Chrome tab, get fresh favicon
+    let favicon = favorite.favicon;
+    if (favorite.chromeTabId) {
+      try {
+        const freshTab = await chrome.tabs.get(favorite.chromeTabId);
+        if (freshTab.favIconUrl) {
+          favicon = freshTab.favIconUrl;
+        }
+      } catch (e) {
+        // Use existing favicon if tab doesn't exist
+      }
+    }
+    
     tabInfo = {
       id: `pin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: favorite.title,
       url: favorite.url,
       savedUrl: favorite.savedUrl,
-      favicon: favorite.favicon,
+      favicon: favicon,
       createdAt: Date.now(),
       chromeTabId: favorite.chromeTabId
     };
@@ -1981,14 +2001,22 @@ async function convertNormalToPinned(tab) {
     return null;
   }
   
+  // Get fresh tab data to ensure we have the latest favicon
+  let freshTab = tab;
+  try {
+    freshTab = await chrome.tabs.get(tab.id);
+  } catch (e) {
+    // Use provided tab if fresh fetch fails
+  }
+  
   const pinnedTab = {
     id: `pin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    title: tab.title || 'Untitled',
-    url: tab.url || '',
-    savedUrl: tab.url || '',
-    favicon: getSafeFavicon(tab.url, tab.favIconUrl),
+    title: freshTab.title || 'Untitled',
+    url: freshTab.url || '',
+    savedUrl: freshTab.url || '',
+    favicon: freshTab.favIconUrl || DEFAULT_FAVICON,
     createdAt: Date.now(),
-    chromeTabId: tab.id,
+    chromeTabId: freshTab.id,
     folderId: null
   };
   
@@ -2074,13 +2102,26 @@ async function convertFavoriteToPinned(favoriteId) {
   
   const favorite = favorites[favoriteIndex];
   
+  // If the favorite has an open Chrome tab, get fresh favicon
+  let favicon = favorite.favicon;
+  if (favorite.chromeTabId) {
+    try {
+      const freshTab = await chrome.tabs.get(favorite.chromeTabId);
+      if (freshTab.favIconUrl) {
+        favicon = freshTab.favIconUrl;
+      }
+    } catch (e) {
+      // Use existing favicon if tab doesn't exist
+    }
+  }
+  
   // Create pinned tab
   const pinnedTab = {
     id: `pin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     title: favorite.title,
     url: favorite.url,
     savedUrl: favorite.savedUrl,
-    favicon: favorite.favicon,
+    favicon: favicon,
     createdAt: Date.now(),
     chromeTabId: favorite.chromeTabId,
     folderId: null
