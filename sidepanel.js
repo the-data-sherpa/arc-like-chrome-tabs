@@ -27,6 +27,9 @@ let draggedType = null;
 let draggedData = null;
 let dropZonesInitialized = false;
 
+// Workspace switching state
+let isSwitchingWorkspace = false;
+
 // Default favicon as a data URI (simple gray globe icon)
 const DEFAULT_FAVICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij48Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODg4IiBzdHJva2Utd2lkdGg9IjEuNSIvPjxwYXRoIGQ9Ik04IDFjMi41IDAgNC41IDMuMSA0LjUgN3MtMiA3LTQuNSA3LTQuNS0zLjEtNC41LTcgMi03IDQuNS03eiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODg4IiBzdHJva2Utd2lkdGg9IjEuNSIvPjxwYXRoIGQ9Ik0xIDhoMTQiIHN0cm9rZT0iIzg4OCIgc3Ryb2tlLXdpZHRoPSIxLjUiLz48L3N2Zz4=';
 
@@ -90,6 +93,9 @@ async function loadData() {
       if (!workspaces[wsId].folders) {
         workspaces[wsId].folders = [];
       }
+      if (!workspaces[wsId].openTabsSnapshot) {
+        workspaces[wsId].openTabsSnapshot = [];
+      }
       // Collapse all folders by default
       workspaces[wsId].folders.forEach(folder => {
         collapsedFolders.add(folder.id);
@@ -120,6 +126,9 @@ async function loadChromeTabs() {
 function setupChromeTabListeners() {
   // Listen for tab updates
   chrome.tabs.onCreated.addListener(async (tab) => {
+    // Don't assign tabs during workspace switching (they'll be assigned by restoreWorkspaceSnapshot)
+    if (isSwitchingWorkspace) return;
+    
     // Assign new tab to current workspace
     await assignTabToWorkspace(tab.id, currentWorkspace);
     await loadChromeTabs();
@@ -127,6 +136,9 @@ function setupChromeTabListeners() {
   });
 
   chrome.tabs.onRemoved.addListener(async (tabId) => {
+    // Don't process during workspace switching (tabs are being closed intentionally)
+    if (isSwitchingWorkspace) return;
+    
     // Remove from workspace normal tabs
     await removeTabFromAllWorkspaces(tabId);
     await loadChromeTabs();
@@ -144,6 +156,9 @@ function setupChromeTabListeners() {
 
   // Listen for storage changes (from background script)
   chrome.storage.onChanged.addListener(() => {
+    // Don't reload data during workspace switching - it would overwrite in-progress updates
+    if (isSwitchingWorkspace) return;
+    
     loadData().then(() => {
       loadChromeTabs().then(renderUI);
     });
@@ -152,6 +167,9 @@ function setupChromeTabListeners() {
   // Listen for messages from background
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === 'updateSidepanel') {
+      // Don't reload data during workspace switching - it would overwrite in-progress updates
+      if (isSwitchingWorkspace) return;
+      
       loadData().then(() => {
         loadChromeTabs().then(renderUI);
       });
@@ -211,9 +229,15 @@ function setupEventListeners() {
   // Workspace selector
   const workspaceSelector = document.getElementById('workspace-selector');
   workspaceSelector.addEventListener('change', async (e) => {
-    currentWorkspace = e.target.value;
-    await chrome.storage.local.set({ currentWorkspace });
-    renderUI();
+    const newWorkspaceId = e.target.value;
+    if (newWorkspaceId && newWorkspaceId !== currentWorkspace) {
+      await switchWorkspace(newWorkspaceId);
+    } else if (!newWorkspaceId) {
+      // If deselecting workspace, just update UI
+      currentWorkspace = '';
+      await chrome.storage.local.set({ currentWorkspace });
+      renderUI();
+    }
   });
 
   // Add workspace button
@@ -859,7 +883,7 @@ function createFolderElement(folder, pinnedTabs) {
   return folderItem;
 }
 
-// Render normal tabs - shows all Chrome tabs that aren't pinned or favorites
+// Render normal tabs - shows Chrome tabs that belong to current workspace and aren't pinned or favorites
 function renderNormalTabs() {
   const container = document.getElementById('normal-tabs-list');
   container.innerHTML = '';
@@ -883,9 +907,45 @@ function renderNormalTabs() {
     }
   });
   
-  // Filter to get only tabs that aren't linked to pinned/favorites
+  // Filter to get only tabs that:
+  // 1. Belong to the current workspace (via tabMapping)
+  // 2. Are not pinned or favorites
+  // 3. OR are "orphan" tabs (not assigned to any workspace) - show them in current workspace
   const normalTabs = allChromeTabs.filter(tab => {
-    return !linkedTabIds.has(tab.id);
+    // Exclude pinned/favorites
+    if (linkedTabIds.has(tab.id)) return false;
+    
+    // Check if tab belongs to current workspace
+    const mapping = tabMapping[tab.id];
+    if (mapping && mapping.workspaceId === currentWorkspace) {
+      return true;
+    }
+    
+    // For tabs without mapping, check if they're in current workspace's normalTabs
+    if (currentWorkspace && workspaces[currentWorkspace]) {
+      const workspace = workspaces[currentWorkspace];
+      if (workspace.normalTabs && workspace.normalTabs.includes(tab.id)) {
+        return true;
+      }
+    }
+    
+    // Check if this is an "orphan" tab (not assigned to ANY workspace)
+    // Show orphan tabs in the current workspace so they're always visible
+    if (!mapping || !mapping.workspaceId) {
+      // Also check it's not in any other workspace's normalTabs
+      let isInOtherWorkspace = false;
+      for (const wsId in workspaces) {
+        if (wsId !== currentWorkspace && workspaces[wsId].normalTabs?.includes(tab.id)) {
+          isInOtherWorkspace = true;
+          break;
+        }
+      }
+      if (!isInOtherWorkspace) {
+        return true; // Show orphan tab in current workspace
+      }
+    }
+    
+    return false;
   });
 
   if (normalTabs.length === 0) {
@@ -1239,7 +1299,8 @@ async function createWorkspace(name) {
       name: name,
       pinnedTabs: [],
       normalTabs: [],
-      folders: []
+      folders: [],
+      openTabsSnapshot: []
     };
 
     workspaces[workspaceId] = workspace;
@@ -1248,10 +1309,17 @@ async function createWorkspace(name) {
     // Update context menus
     chrome.runtime.sendMessage({ type: 'workspaceCreated' });
 
-    // Select new workspace
+    // If there's a current workspace, capture its state before switching
+    if (currentWorkspace && workspaces[currentWorkspace]) {
+      await captureWorkspaceSnapshot(currentWorkspace);
+      await closeWorkspaceTabs(currentWorkspace);
+    }
+
+    // Select new workspace (starts empty)
     currentWorkspace = workspaceId;
     await chrome.storage.local.set({ currentWorkspace });
 
+    await loadChromeTabs();
     renderUI();
   } catch (error) {
     console.error('Error creating workspace:', error);
@@ -2245,7 +2313,8 @@ async function importAsWorkspaces(selectedWorkspaces) {
       name: ws.name,
       pinnedTabs: [],
       normalTabs: [],
-      folders: []
+      folders: [],
+      openTabsSnapshot: []
     };
 
     // Create folders and their tabs (folder names stay as-is, not prefixed)
@@ -2280,10 +2349,17 @@ async function importAsWorkspaces(selectedWorkspaces) {
     await new Promise(resolve => setTimeout(resolve, 1));
   }
 
-  // Select first imported workspace if no current workspace
-  if (!currentWorkspace && firstImportedWorkspaceId) {
+  // Switch to first imported workspace
+  if (firstImportedWorkspaceId) {
+    // Capture current workspace state before switching
+    if (currentWorkspace && workspaces[currentWorkspace]) {
+      await captureWorkspaceSnapshot(currentWorkspace);
+      await closeWorkspaceTabs(currentWorkspace);
+    }
+    
     currentWorkspace = firstImportedWorkspaceId;
     await chrome.storage.local.set({ currentWorkspace });
+    await loadChromeTabs();
   }
 }
 
@@ -2369,4 +2445,282 @@ function createFavoriteFromBookmark(bookmark) {
     createdAt: Date.now(),
     chromeTabId: null
   };
+}
+
+// ========== WORKSPACE TAB ISOLATION FUNCTIONS ==========
+
+/**
+ * Capture the current state of all Chrome tabs for the current workspace.
+ * This saves the URLs, titles, and favicons so they can be restored later.
+ */
+async function captureWorkspaceSnapshot(workspaceId) {
+  if (!workspaceId || !workspaces[workspaceId]) return;
+  
+  const workspace = workspaces[workspaceId];
+  const snapshot = [];
+  
+  // Get all current Chrome tabs
+  const chromeTabs = await chrome.tabs.query({});
+  
+  // Build set of favorite chromeTabIds (favorites are global, not workspace-specific)
+  const favoriteTabIds = new Set();
+  favorites.forEach(f => {
+    if (f.chromeTabId) favoriteTabIds.add(f.chromeTabId);
+  });
+  
+  // For each Chrome tab, save its state
+  for (const tab of chromeTabs) {
+    // Skip favorite tabs - they're global and shouldn't be closed
+    if (favoriteTabIds.has(tab.id)) continue;
+    
+    // Skip chrome:// and about: URLs that can't be restored
+    if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('about:'))) continue;
+    
+    // Check if this tab is a pinned tab in this workspace
+    let isPinnedTab = false;
+    let pinnedTabId = null;
+    
+    if (workspace.pinnedTabs) {
+      const pinnedTab = workspace.pinnedTabs.find(pt => pt.chromeTabId === tab.id);
+      if (pinnedTab) {
+        isPinnedTab = true;
+        pinnedTabId = pinnedTab.id;
+      }
+    }
+    
+    // Also check tabMapping to see if this tab belongs to this workspace
+    const mapping = tabMapping[tab.id];
+    // Tab belongs to workspace if:
+    // 1. It's a pinned tab (already checked above)
+    // 2. tabMapping says it belongs to this workspace
+    // 3. tabMapping has a pinnedTabId that exists in this workspace
+    let belongsToWorkspace = false;
+    if (mapping) {
+      if (mapping.workspaceId === workspaceId) {
+        belongsToWorkspace = true;
+      } else if (mapping.pinnedTabId && workspace.pinnedTabs) {
+        // Check if the pinnedTabId exists in this workspace
+        belongsToWorkspace = workspace.pinnedTabs.some(pt => pt.id === mapping.pinnedTabId);
+      }
+    }
+    
+    // Only include tabs that belong to this workspace (pinned or normal)
+    if (isPinnedTab || belongsToWorkspace) {
+      snapshot.push({
+        url: tab.url || '',
+        title: tab.title || 'Untitled',
+        favicon: getSafeFavicon(tab.url, tab.favIconUrl),
+        wasActive: tab.active,
+        isPinnedTab: isPinnedTab,
+        pinnedTabId: pinnedTabId
+      });
+    }
+  }
+  
+  // Save snapshot to workspace
+  workspace.openTabsSnapshot = snapshot;
+  await chrome.storage.local.set({ workspaces });
+}
+
+/**
+ * Close all tabs belonging to the current workspace (except favorites).
+ */
+async function closeWorkspaceTabs(workspaceId) {
+  if (!workspaceId || !workspaces[workspaceId]) return;
+  
+  const workspace = workspaces[workspaceId];
+  const tabIdsToClose = [];
+  
+  // Get all current Chrome tabs
+  const chromeTabs = await chrome.tabs.query({});
+  
+  // Build set of favorite chromeTabIds (favorites are global)
+  const favoriteTabIds = new Set();
+  favorites.forEach(f => {
+    if (f.chromeTabId) favoriteTabIds.add(f.chromeTabId);
+  });
+  
+  for (const tab of chromeTabs) {
+    // Skip favorite tabs
+    if (favoriteTabIds.has(tab.id)) continue;
+    
+    // Check if this tab belongs to this workspace
+    const mapping = tabMapping[tab.id];
+    const belongsToWorkspace = mapping && mapping.workspaceId === workspaceId;
+    
+    // Check if it's a pinned tab in this workspace
+    let isPinnedTab = false;
+    if (workspace.pinnedTabs) {
+      isPinnedTab = workspace.pinnedTabs.some(pt => pt.chromeTabId === tab.id);
+    }
+    
+    if (isPinnedTab || belongsToWorkspace) {
+      tabIdsToClose.push(tab.id);
+    }
+  }
+  
+  // Clear chromeTabId from pinned tabs before closing
+  if (workspace.pinnedTabs) {
+    workspace.pinnedTabs.forEach(pt => {
+      if (tabIdsToClose.includes(pt.chromeTabId)) {
+        pt.chromeTabId = null;
+      }
+    });
+  }
+  
+  // Clear workspace normalTabs
+  workspace.normalTabs = [];
+  
+  // Close the tabs
+  if (tabIdsToClose.length > 0) {
+    // Ensure at least one tab remains open (Chrome requires it)
+    const allTabs = await chrome.tabs.query({});
+    const remainingTabsAfterClose = allTabs.filter(t => !tabIdsToClose.includes(t.id));
+    
+    if (remainingTabsAfterClose.length === 0) {
+      // Create a new tab first before closing all others
+      await chrome.tabs.create({ url: 'chrome://newtab' });
+    }
+    
+    // Close workspace tabs
+    try {
+      await chrome.tabs.remove(tabIdsToClose);
+    } catch (error) {
+      // Some tabs may have already been closed
+    }
+  }
+  
+  // Clean up tabMapping
+  tabIdsToClose.forEach(tabId => {
+    delete tabMapping[tabId];
+  });
+  
+  await chrome.storage.local.set({ workspaces, tabMapping });
+}
+
+/**
+ * Restore tabs from a workspace's saved snapshot.
+ */
+async function restoreWorkspaceSnapshot(workspaceId) {
+  if (!workspaceId || !workspaces[workspaceId]) return;
+  
+  const workspace = workspaces[workspaceId];
+  const snapshot = workspace.openTabsSnapshot || [];
+  
+  if (snapshot.length === 0) return;
+  
+  let activeTabToRestore = null;
+  
+  // Restore each tab from snapshot
+  for (const savedTab of snapshot) {
+    // Skip empty URLs
+    if (!savedTab.url) continue;
+    
+    // Skip chrome:// URLs - they can't be opened programmatically
+    if (savedTab.url.startsWith('chrome://') || savedTab.url.startsWith('about:')) continue;
+    
+    try {
+      // If this was a pinned tab, use the savedUrl instead of the current URL
+      let urlToOpen = savedTab.url;
+      if (savedTab.isPinnedTab && savedTab.pinnedTabId) {
+        const pinnedTab = workspace.pinnedTabs?.find(pt => pt.id === savedTab.pinnedTabId);
+        if (pinnedTab) {
+          urlToOpen = pinnedTab.savedUrl || savedTab.url;
+        }
+      }
+      
+      // Create the tab
+      const newTab = await chrome.tabs.create({ 
+        url: urlToOpen,
+        active: false // Open inactive, we'll activate the right one at the end
+      });
+      
+      // Update pinned tab mapping if this was a pinned tab
+      if (savedTab.isPinnedTab && savedTab.pinnedTabId) {
+        const pinnedTab = workspace.pinnedTabs?.find(pt => pt.id === savedTab.pinnedTabId);
+        if (pinnedTab) {
+          pinnedTab.chromeTabId = newTab.id;
+          tabMapping[newTab.id] = {
+            pinnedTabId: savedTab.pinnedTabId,
+            favoriteId: null,
+            workspaceId: workspaceId
+          };
+          // Save immediately to prevent race conditions with storage listeners
+          await chrome.storage.local.set({ workspaces, tabMapping });
+        }
+      } else {
+        // Normal tab - add to workspace normalTabs
+        if (!workspace.normalTabs) workspace.normalTabs = [];
+        workspace.normalTabs.push(newTab.id);
+        tabMapping[newTab.id] = {
+          pinnedTabId: null,
+          favoriteId: null,
+          workspaceId: workspaceId
+        };
+      }
+      
+      // Track which tab should be active
+      if (savedTab.wasActive) {
+        activeTabToRestore = newTab.id;
+      }
+    } catch (error) {
+      // Failed to open tab, skip it
+    }
+  }
+  
+  // Activate the tab that was previously active
+  if (activeTabToRestore) {
+    try {
+      await chrome.tabs.update(activeTabToRestore, { active: true });
+    } catch (error) {
+      // Tab may not exist
+    }
+  }
+  
+  // Clear the snapshot after restoring
+  workspace.openTabsSnapshot = [];
+  
+  await chrome.storage.local.set({ workspaces, tabMapping });
+}
+
+/**
+ * Switch to a different workspace - captures current state, closes tabs, restores new workspace.
+ */
+async function switchWorkspace(newWorkspaceId) {
+  if (isSwitchingWorkspace) return;
+  if (!newWorkspaceId || newWorkspaceId === currentWorkspace) return;
+  
+  isSwitchingWorkspace = true;
+  
+  try {
+    // Step 1: Capture current workspace snapshot
+    if (currentWorkspace && workspaces[currentWorkspace]) {
+      await captureWorkspaceSnapshot(currentWorkspace);
+    }
+    
+    // Step 2: Close current workspace tabs
+    if (currentWorkspace && workspaces[currentWorkspace]) {
+      await closeWorkspaceTabs(currentWorkspace);
+    }
+    
+    // Step 3: Update current workspace
+    const oldWorkspace = currentWorkspace;
+    currentWorkspace = newWorkspaceId;
+    await chrome.storage.local.set({ currentWorkspace });
+    
+    // Step 4: Restore new workspace tabs
+    if (workspaces[newWorkspaceId]) {
+      await restoreWorkspaceSnapshot(newWorkspaceId);
+    }
+    
+    // Step 5: Reload data from storage to ensure we have latest state after all updates
+    await loadData();
+    await loadChromeTabs();
+    renderUI();
+    
+  } catch (error) {
+    console.error('Error switching workspace:', error);
+  } finally {
+    isSwitchingWorkspace = false;
+  }
 }
