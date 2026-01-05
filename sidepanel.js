@@ -1,4 +1,4 @@
-// Sidepanel script for ARC-like Chrome Tabs extension
+// Sidepanel script for Tabula extension
 
 let workspaces = {};
 let favorites = [];

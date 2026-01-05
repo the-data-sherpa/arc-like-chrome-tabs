@@ -1,6 +1,6 @@
-# ARC-like Chrome Tabs
+# Tabula
 
-A Chrome extension that brings ARC browser's innovative vertical tab management to Google Chrome. Organize your browsing with workspaces, pinned tabs, and favorites.
+A Chrome extension that brings innovative vertical tab management to Google Chrome. Organize your browsing with workspaces, pinned tabs, and favorites.
 
 ![Chrome Web Store](https://img.shields.io/badge/Chrome-Extension-green)
 ![Manifest V3](https://img.shields.io/badge/Manifest-V3-blue)
@@ -38,8 +38,8 @@ A Chrome extension that brings ARC browser's innovative vertical tab management 
 
 ## 📦 Installation
 
-### From Chrome Web Store (Recommended)
-*Coming soon*
+### From Chrome Web Store
+*Coming soon - Search for "Tabula"*
 
 ### Manual Installation (Developer Mode)
 
@@ -110,4 +110,4 @@ MIT License - feel free to use and modify for your own projects.
 
 ## 🙏 Acknowledgments
 
-Inspired by the [Arc Browser](https://arc.net/) by The Browser Company.
+Tabula - Your organized browsing companion.

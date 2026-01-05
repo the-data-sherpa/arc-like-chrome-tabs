@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ARC-like Chrome Tabs",
+  "name": "Tabula",
   "version": "1.0.0",
-  "description": "Vertical tab sidebar with workspaces, pinned tabs, and favorites - mimicking ARC browser behavior",
+  "description": "Vertical tab sidebar with workspaces, pinned tabs, and favorites. Organize your browsing with Tabula.",
   
   "permissions": [
     "tabs",
@@ -17,7 +17,7 @@
         "default": "Ctrl+Shift+E",
         "mac": "Command+Shift+E"
       },
-      "description": "Open ARC-like Tabs sidebar"
+      "description": "Open Tabula sidebar"
     }
   },
   
@@ -34,7 +34,7 @@
   },
   
   "action": {
-    "default_title": "ARC-like Tabs",
+    "default_title": "Tabula",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
