@@ -962,6 +962,16 @@ function createFavoriteIconButton(favorite) {
     await handleTabClick(favorite, 'favorite', favorite.id);
   });
   
+  // Middle-click handler to close tab
+  iconBtn.addEventListener('auxclick', async (e) => {
+    if (e.button === 1) { // Middle mouse button
+      e.preventDefault();
+      e.stopPropagation();
+      await closeTabFromContext({ itemId: favorite.id, chromeTabId: favorite.chromeTabId }, 'favorite');
+      renderUI();
+    }
+  });
+  
   // Right-click handler for context menu
   iconBtn.addEventListener('contextmenu', (e) => {
     showContextMenu(e, { itemId: favorite.id, chromeTabId: favorite.chromeTabId }, 'favorite');
@@ -1307,6 +1317,16 @@ function createTabItem(item, type, itemId) {
     await handleTabClick(item, type, itemId);
   });
 
+  // Middle-click handler to close tab
+  tabItem.addEventListener('auxclick', async (e) => {
+    if (e.button === 1) { // Middle mouse button
+      e.preventDefault();
+      e.stopPropagation();
+      await closeTabFromContext({ itemId, chromeTabId: item.chromeTabId }, type);
+      renderUI();
+    }
+  });
+
   // Right-click handler for context menu
   tabItem.addEventListener('contextmenu', (e) => {
     showContextMenu(e, { itemId, chromeTabId: item.chromeTabId }, type);
@@ -1376,6 +1396,15 @@ function createChromeTabItem(tab) {
   tabItem.addEventListener('click', async (e) => {
     if (e.target === closeBtn) return;
     await chrome.tabs.update(tab.id, { active: true });
+  });
+
+  // Middle-click handler to close tab
+  tabItem.addEventListener('auxclick', async (e) => {
+    if (e.button === 1) { // Middle mouse button
+      e.preventDefault();
+      e.stopPropagation();
+      await chrome.tabs.remove(tab.id);
+    }
   });
 
   // Right-click handler for context menu
