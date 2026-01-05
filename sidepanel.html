@@ -74,6 +74,24 @@
     <div class="context-menu-item danger" data-action="delete-folder">Delete Folder</div>
   </div>
 
+  <!-- Workspace Context Menu -->
+  <div id="workspace-context-menu" class="context-menu hidden">
+    <div class="context-menu-item" data-action="rename-workspace">Rename Workspace</div>
+    <div class="context-menu-item danger" data-action="delete-workspace">Delete Workspace</div>
+  </div>
+
+  <!-- Delete Workspace Confirmation Modal -->
+  <div id="delete-workspace-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Delete Workspace?</h3>
+      <p class="delete-warning">This will permanently delete the workspace "<span id="delete-workspace-name"></span>" and all its pinned tabs. This action cannot be undone.</p>
+      <div class="modal-buttons">
+        <button id="delete-workspace-cancel-btn" class="modal-btn cancel">Cancel</button>
+        <button id="delete-workspace-confirm-btn" class="modal-btn danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Folder Modal -->
   <div id="folder-modal" class="modal hidden">
     <div class="modal-content">
