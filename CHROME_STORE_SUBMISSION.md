@@ -29,17 +29,41 @@ See `CHROME_STORE_DESCRIPTION.md` for the full description.
 
 ## 🖼️ Graphics Assets
 
+Based on [official Chrome Web Store guidelines](https://developer.chrome.com/webstore/images#icons):
+
 ### Required Assets
 
-| Asset | Size | Format | Status |
-|-------|------|--------|--------|
-| **Icon** | 128×128 | PNG | ✅ Already have (`icons/icon128.png`) |
-| **Screenshot 1** | 1280×800 or 640×400 | PNG/JPG | ⚠️ Need to create |
-| **Screenshot 2** (optional) | 1280×800 or 640×400 | PNG/JPG | ⚠️ Optional |
-| **Promo Tile** (optional) | 440×280 | PNG | ✅ Generator created |
+| Asset | Size | Format | Requirements | Status |
+|-------|------|--------|--------------|--------|
+| **Store Icon** | 128×128 | PNG | Artwork: 96×96 (16px transparent padding), front-facing, works on light/dark backgrounds | ✅ Already have (`icons/icon128.png`) |
+
+**Icon Guidelines:**
+- Artwork should be 96×96 pixels centered in 128×128 canvas
+- 16 pixels of transparent padding on all sides
+- Front-facing perspective (not dramatic angles)
+- Works on both light and dark backgrounds
+- No edge borders (UI adds edges)
+- Avoid large drop shadows
+- See [official icon guidelines](https://developer.chrome.com/webstore/images#icons)
+| **Screenshot 1** | 1280×800 or 640×400 | JPEG or 24-bit PNG (no alpha) | Square corners, full bleed | ⚠️ Need to create |
+| **Small Promo Tile** | 440×280 | JPEG or 24-bit PNG (no alpha) | **REQUIRED** - Avoid text, saturated colors | ✅ Generator created |
+
+### Optional Assets
+
+| Asset | Size | Format | Requirements | Status |
+|-------|------|--------|--------------|--------|
+| **Screenshots 2-5** | 1280×800 or 640×400 | JPEG or 24-bit PNG (no alpha) | Square corners, full bleed | ⚠️ Optional |
+| **Marquee Promo Tile** | 1400×560 | JPEG or 24-bit PNG (no alpha) | For featured placement | ⚠️ Optional |
 
 ### How to Create Screenshots
 
+**Requirements:**
+- **Size**: 1280×800 (preferred) or 640×400 pixels
+- **Format**: JPEG or 24-bit PNG (no alpha channel)
+- **Style**: Square corners, no padding (full bleed)
+- **Content**: Show actual extension in use
+
+**Steps:**
 1. **Open Tabula sidebar** in Chrome
 2. **Take screenshots** showing:
    - Main sidebar with workspaces
@@ -53,10 +77,27 @@ See `CHROME_STORE_DESCRIPTION.md` for the full description.
    - Screenshot 2: Favorites bar and folder organization
    - Screenshot 3: Workspace management (rename/delete)
 
-### Promo Tile
+**Note**: If using macOS Screenshot tool, ensure you export as JPEG or convert PNG to remove alpha channel.
+
+### Promo Tile (REQUIRED)
+
+**Small Promo Tile (440×280) - REQUIRED:**
 - Open `generate-store-icon.html` in your browser
 - Click "Generate Icon" to preview
 - Click "Download PNG" to save `tabula-promo-tile-440x280.png`
+- The generator creates a 24-bit PNG (no alpha) as required
+
+**Design Guidelines:**
+- Avoid text (or use minimal text)
+- Use saturated colors
+- Fill entire region
+- Works when shrunk to half size
+- Well-defined edges
+
+**Marquee Promo Tile (1400×560) - Optional:**
+- For featured placement in Chrome Web Store
+- Same design principles as small promo tile
+- Can be created by scaling/adapting the small version
 
 ---
 
@@ -88,10 +129,11 @@ Tab management and organization - all tabs are managed locally.
 - [x] Short description (132 chars)
 - [x] Full description
 - [x] Category: Productivity
-- [x] Icon (128×128)
-- [ ] Screenshot 1 (1280×800)
-- [ ] Screenshot 2 (optional)
-- [ ] Promo tile (440×280) - generator ready
+- [x] Store Icon (128×128 PNG) - Artwork 96×96 with 16px padding
+- [ ] Screenshot 1 (1280×800 or 640×400, JPEG/24-bit PNG, no alpha)
+- [ ] Small Promo Tile (440×280, JPEG/24-bit PNG, no alpha) - **REQUIRED**
+- [ ] Screenshot 2-5 (optional)
+- [ ] Marquee Promo Tile (1400×560, optional)
 - [x] Privacy policy (can use simple statement)
 - [x] Permissions justification
 - [x] Package file: `tabula-v1.0.0.zip`

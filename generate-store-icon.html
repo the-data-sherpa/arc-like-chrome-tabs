@@ -70,9 +70,10 @@
     
     <div class="info">
       <strong>Chrome Web Store Requirements:</strong><br>
-      • Promo Tile: 440×280 pixels (optional but recommended)<br>
-      • Format: PNG<br>
-      • File size: Under 1MB
+      • Small Promo Tile: 440×280 pixels (REQUIRED)<br>
+      • Format: JPEG or 24-bit PNG (no alpha channel)<br>
+      • File size: Under 1MB<br>
+      • <a href="https://developer.chrome.com/webstore/images#icons" target="_blank">Official Guidelines</a>
     </div>
     
     <div class="preview">
@@ -169,9 +170,13 @@
       const canvas = document.getElementById('canvas');
       const link = document.createElement('a');
       link.download = 'tabula-promo-tile-440x280.png';
+      // Export as 24-bit PNG (no alpha) - Chrome Web Store requirement
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
+    
+    // Note: Canvas exports PNG without alpha when background is opaque
+    // The dark gradient background ensures no transparency
     
     // Generate on load
     window.onload = generateIcon;
