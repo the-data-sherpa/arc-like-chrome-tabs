@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "ARC-like Chrome Tabs",
+  "version": "1.0.0",
+  "description": "Vertical tab sidebar with workspaces, pinned tabs, and favorites - mimicking ARC browser behavior",
+  
+  "permissions": [
+    "tabs",
+    "storage",
+    "contextMenus",
+    "sidePanel"
+  ],
+  
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Open ARC-like Tabs sidebar"
+    }
+  },
+  
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  
+  "action": {
+    "default_title": "ARC-like Tabs",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
+

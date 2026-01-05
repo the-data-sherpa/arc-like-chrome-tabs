@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARC-like Tabs</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="sidebar-container">
+    <!-- Workspace Selector -->
+    <div class="workspace-header">
+      <select id="workspace-selector" class="workspace-selector">
+        <option value="">Select Workspace</option>
+      </select>
+      <button id="add-workspace-btn" class="add-workspace-btn" title="Add Workspace">+</button>
+      <button id="import-btn" class="import-btn" title="Import Bookmarks">↓</button>
+    </div>
+    
+    <!-- Hidden file input for import -->
+    <input type="file" id="import-file-input" accept=".html,.htm" style="display: none;">
+
+    <!-- Favorites Section -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Favorites</span>
+      </div>
+      <div id="favorites-list" class="tabs-list"></div>
+    </div>
+
+    <!-- Pinned Tabs Section -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Pinned Tabs</span>
+        <button id="add-folder-btn" class="section-action-btn" title="New Folder">+</button>
+      </div>
+      <div id="pinned-tabs-list" class="tabs-list"></div>
+    </div>
+
+    <!-- Normal Tabs Section -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Tabs</span>
+        <button id="new-tab-btn" class="section-action-btn" title="New Tab">+</button>
+      </div>
+      <div id="normal-tabs-list" class="tabs-list"></div>
+    </div>
+  </div>
+
+  <!-- Workspace Management Modal -->
+  <div id="workspace-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="modal-title">Add Workspace</h3>
+      <input type="text" id="workspace-name-input" placeholder="Workspace name" maxlength="50">
+      <div class="modal-buttons">
+        <button id="modal-cancel-btn" class="modal-btn cancel">Cancel</button>
+        <button id="modal-confirm-btn" class="modal-btn confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Context Menu -->
+  <div id="tab-context-menu" class="context-menu hidden">
+    <div class="context-menu-item" data-action="pin">Pin to Current Workspace</div>
+    <div class="context-menu-item" data-action="favorite">Add to Favorites</div>
+    <div class="context-menu-item" data-action="move-to-folder">Move to Folder...</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="update-saved">Update Saved URL</div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="close">Close Tab</div>
+    <div class="context-menu-item danger" data-action="remove">Remove from List</div>
+  </div>
+
+  <!-- Folder Context Menu -->
+  <div id="folder-context-menu" class="context-menu hidden">
+    <div class="context-menu-item" data-action="rename-folder">Rename Folder</div>
+    <div class="context-menu-item danger" data-action="delete-folder">Delete Folder</div>
+  </div>
+
+  <!-- Folder Modal -->
+  <div id="folder-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="folder-modal-title">New Folder</h3>
+      <input type="text" id="folder-name-input" placeholder="Folder name" maxlength="50">
+      <div class="modal-buttons">
+        <button id="folder-modal-cancel-btn" class="modal-btn cancel">Cancel</button>
+        <button id="folder-modal-confirm-btn" class="modal-btn confirm">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move to Folder Modal -->
+  <div id="move-folder-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Move to Folder</h3>
+      <select id="folder-select" class="folder-select">
+        <option value="">No Folder (Root)</option>
+      </select>
+      <div class="modal-buttons">
+        <button id="move-folder-cancel-btn" class="modal-btn cancel">Cancel</button>
+        <button id="move-folder-confirm-btn" class="modal-btn confirm">Move</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Options Modal -->
+  <div id="import-modal" class="modal hidden">
+    <div class="modal-content import-modal-content">
+      <h3>Import Bookmarks</h3>
+      <p class="import-description">Select bookmark folders to import. Each folder can become a workspace or be imported into the current workspace.</p>
+      
+      <!-- Step 1: Select folders to import -->
+      <div id="import-step-1">
+        <h4 class="import-step-title">1. Select folders to import:</h4>
+        <div id="import-folder-selection" class="import-folder-selection"></div>
+      </div>
+      
+      <!-- Step 2: Choose import destination -->
+      <div id="import-step-2" class="import-step-2">
+        <h4 class="import-step-title">2. Import destination:</h4>
+        <div class="import-options">
+          <label class="import-option">
+            <input type="radio" name="import-target" value="new-workspaces" checked>
+            <span>Create new workspace for each selected folder</span>
+          </label>
+          <label class="import-option">
+            <input type="radio" name="import-target" value="current-workspace">
+            <span>Import all into current workspace</span>
+          </label>
+          <label class="import-option">
+            <input type="radio" name="import-target" value="favorites">
+            <span>Import all as favorites (no folders)</span>
+          </label>
+        </div>
+      </div>
+      
+      <div id="import-preview" class="import-preview hidden">
+        <h4>Preview:</h4>
+        <div id="import-preview-content"></div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="import-modal-cancel-btn" class="modal-btn cancel">Cancel</button>
+        <button id="import-modal-confirm-btn" class="modal-btn confirm">Import</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
+
