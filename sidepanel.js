@@ -55,6 +55,35 @@ function getSafeFavicon(url, favIconUrl) {
   return DEFAULT_FAVICON;
 }
 
+// Update favicon for a favorite or pinned tab when Chrome provides a new favicon
+async function updateFaviconForTab(chromeTabId, newFaviconUrl) {
+  if (!newFaviconUrl || newFaviconUrl.startsWith('chrome://')) return;
+  
+  let updated = false;
+  
+  // Check favorites
+  const favoriteIndex = favorites.findIndex(f => f.chromeTabId === chromeTabId);
+  if (favoriteIndex !== -1 && favorites[favoriteIndex].favicon !== newFaviconUrl) {
+    favorites[favoriteIndex].favicon = newFaviconUrl;
+    updated = true;
+  }
+  
+  // Check pinned tabs in all workspaces
+  for (const wsId in workspaces) {
+    const pinnedTabs = workspaces[wsId].pinnedTabs || [];
+    const pinnedIndex = pinnedTabs.findIndex(pt => pt.chromeTabId === chromeTabId);
+    if (pinnedIndex !== -1 && pinnedTabs[pinnedIndex].favicon !== newFaviconUrl) {
+      pinnedTabs[pinnedIndex].favicon = newFaviconUrl;
+      updated = true;
+    }
+  }
+  
+  // Save to storage if anything was updated
+  if (updated) {
+    await chrome.storage.local.set({ favorites, workspaces });
+  }
+}
+
 // Initialize sidepanel
 document.addEventListener('DOMContentLoaded', async () => {
   await loadData();
@@ -156,7 +185,11 @@ function setupChromeTabListeners() {
     renderUI();
   });
 
-  chrome.tabs.onUpdated.addListener(() => {
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // Update favicon if it changed for a favorite or pinned tab
+    if (changeInfo.favIconUrl) {
+      await updateFaviconForTab(tabId, changeInfo.favIconUrl);
+    }
     loadChromeTabs().then(renderUI);
   });
 
@@ -557,20 +590,36 @@ async function pinTab(target, type) {
 }
 
 // Add tab to favorites
+// Maximum number of favorites allowed
+const MAX_FAVORITES = 8;
+
 async function addToFavorites(target, type) {
+  // Check if we've reached the maximum number of favorites
+  if (favorites.length >= MAX_FAVORITES) {
+    alert(`Maximum of ${MAX_FAVORITES} favorites allowed. Please remove one before adding another.`);
+    return;
+  }
+  
   let tabInfo;
   
   if (type === 'normal') {
-    // Get tab info from Chrome
-    const tab = allChromeTabs.find(t => t.id === target.tabId);
+    // Get tab info from Chrome - use fresh data from chrome.tabs.get for accurate favicon
+    let tab = allChromeTabs.find(t => t.id === target.tabId);
     if (!tab) return;
+    
+    // Get fresh tab data to ensure we have the latest favicon
+    try {
+      tab = await chrome.tabs.get(target.tabId);
+    } catch (e) {
+      // Use cached tab if fresh fetch fails
+    }
     
     tabInfo = {
       id: `fav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: tab.title || 'Untitled',
       url: tab.url || '',
       savedUrl: tab.url || '',
-      favicon: getSafeFavicon(tab.url, tab.favIconUrl),
+      favicon: tab.favIconUrl || DEFAULT_FAVICON,
       createdAt: Date.now(),
       chromeTabId: tab.id
     };
@@ -590,12 +639,25 @@ async function addToFavorites(target, type) {
     const pinnedTab = workspace.pinnedTabs.find(pt => pt.id === target.itemId);
     if (!pinnedTab) return;
     
+    // If the pinned tab has an open Chrome tab, get fresh favicon
+    let favicon = pinnedTab.favicon;
+    if (pinnedTab.chromeTabId) {
+      try {
+        const freshTab = await chrome.tabs.get(pinnedTab.chromeTabId);
+        if (freshTab.favIconUrl) {
+          favicon = freshTab.favIconUrl;
+        }
+      } catch (e) {
+        // Use existing favicon if tab doesn't exist
+      }
+    }
+    
     tabInfo = {
       id: `fav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: pinnedTab.title,
       url: pinnedTab.url,
       savedUrl: pinnedTab.savedUrl,
-      favicon: pinnedTab.favicon,
+      favicon: favicon,
       createdAt: Date.now(),
       chromeTabId: pinnedTab.chromeTabId
     };
@@ -1863,14 +1925,28 @@ async function handleTabDrop(data, targetType, targetItemId, targetFolderId) {
 
 // Convert normal Chrome tab to favorite
 async function convertNormalToFavorite(tab) {
+  // Check if we've reached the maximum number of favorites
+  if (favorites.length >= MAX_FAVORITES) {
+    alert(`Maximum of ${MAX_FAVORITES} favorites allowed. Please remove one before adding another.`);
+    return null;
+  }
+  
+  // Get fresh tab data to ensure we have the latest favicon
+  let freshTab = tab;
+  try {
+    freshTab = await chrome.tabs.get(tab.id);
+  } catch (e) {
+    // Use provided tab if fresh fetch fails
+  }
+  
   const favorite = {
     id: `fav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    title: tab.title || 'Untitled',
-    url: tab.url || '',
-    savedUrl: tab.url || '',
-    favicon: getSafeFavicon(tab.url, tab.favIconUrl),
+    title: freshTab.title || 'Untitled',
+    url: freshTab.url || '',
+    savedUrl: freshTab.url || '',
+    favicon: freshTab.favIconUrl || DEFAULT_FAVICON,
     createdAt: Date.now(),
-    chromeTabId: tab.id
+    chromeTabId: freshTab.id
   };
   
   favorites.push(favorite);
@@ -1930,6 +2006,12 @@ async function convertNormalToPinned(tab) {
 
 // Convert pinned tab to favorite
 async function convertPinnedToFavorite(pinnedTabId) {
+  // Check if we've reached the maximum number of favorites
+  if (favorites.length >= MAX_FAVORITES) {
+    alert(`Maximum of ${MAX_FAVORITES} favorites allowed. Please remove one before adding another.`);
+    return null;
+  }
+  
   if (!currentWorkspace || !workspaces[currentWorkspace]) return null;
   
   const workspace = workspaces[currentWorkspace];
@@ -1938,13 +2020,26 @@ async function convertPinnedToFavorite(pinnedTabId) {
   
   const pinnedTab = workspace.pinnedTabs[pinnedTabIndex];
   
+  // If the pinned tab has an open Chrome tab, get fresh favicon
+  let favicon = pinnedTab.favicon;
+  if (pinnedTab.chromeTabId) {
+    try {
+      const freshTab = await chrome.tabs.get(pinnedTab.chromeTabId);
+      if (freshTab.favIconUrl) {
+        favicon = freshTab.favIconUrl;
+      }
+    } catch (e) {
+      // Use existing favicon if tab doesn't exist
+    }
+  }
+  
   // Create favorite
   const favorite = {
     id: `fav-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     title: pinnedTab.title,
     url: pinnedTab.url,
     savedUrl: pinnedTab.savedUrl,
-    favicon: pinnedTab.favicon,
+    favicon: favicon,
     createdAt: Date.now(),
     chromeTabId: pinnedTab.chromeTabId
   };
