@@ -109,11 +109,12 @@ Tab management and organization - all tabs are managed locally.
 ### Permissions Justification
 
 **Required Permissions:**
-- `tabs` - Required to display, manage, and organize browser tabs
+- `tabs` - Required to display, manage, and organize browser tabs (also provides favicon URLs)
 - `storage` - Required to save workspaces, pinned tabs, and favorites locally
 - `contextMenus` - Required to provide right-click menu options for pinning tabs
 - `sidePanel` - Required to display the vertical sidebar interface
-- `<all_urls>` - Required to access tab favicons for display
+
+**Note:** Tabula does not require host permissions. All tab information, including favicon URLs, is provided by the Chrome tabs API.
 
 **Privacy Policy:**
 - All data stored locally using `chrome.storage.local`
