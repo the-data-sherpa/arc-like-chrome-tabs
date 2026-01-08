@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tabula",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vertical tab sidebar with workspaces, pinned tabs, and favorites. Organize your browsing with Tabula.",
   
   "permissions": [
