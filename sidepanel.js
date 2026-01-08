@@ -1004,9 +1004,10 @@ function renderPinnedTabs() {
     return;
   }
 
-  // Render folders first
-  folders.forEach(folder => {
-    const folderElement = createFolderElement(folder, pinnedTabs);
+  // Render root-level folders (folders without a parent)
+  const rootFolders = folders.filter(f => !f.parentFolderId);
+  rootFolders.forEach(folder => {
+    const folderElement = createFolderElement(folder, pinnedTabs, folders);
     container.appendChild(folderElement);
   });
 
@@ -1023,13 +1024,39 @@ function renderPinnedTabs() {
   }
 }
 
+// Recursively find all open tabs in a folder and its nested folders
+function findOpenTabsRecursive(folderId, pinnedTabs, allFolders) {
+  const openTabs = [];
+  
+  // Find tabs directly in this folder
+  const tabsInFolder = pinnedTabs.filter(pt => pt.folderId === folderId);
+  const directOpenTabs = tabsInFolder.filter(pt => pt.chromeTabId !== null && pt.chromeTabId !== undefined);
+  openTabs.push(...directOpenTabs);
+  
+  // Recursively find open tabs in nested folders
+  const nestedFolders = allFolders.filter(f => f.parentFolderId === folderId);
+  nestedFolders.forEach(nestedFolder => {
+    const nestedOpenTabs = findOpenTabsRecursive(nestedFolder.id, pinnedTabs, allFolders);
+    openTabs.push(...nestedOpenTabs);
+  });
+  
+  return openTabs;
+}
+
 // Create folder element
-function createFolderElement(folder, pinnedTabs) {
+function createFolderElement(folder, pinnedTabs, allFolders) {
   const isCollapsed = collapsedFolders.has(folder.id);
   const tabsInFolder = pinnedTabs.filter(pt => pt.folderId === folder.id);
   
-  // Find all open tabs in this folder (tabs with a valid chromeTabId)
-  const openTabsInFolder = tabsInFolder.filter(pt => pt.chromeTabId !== null && pt.chromeTabId !== undefined);
+  // Find nested folders (folders with this folder as parent)
+  const nestedFolders = allFolders.filter(f => f.parentFolderId === folder.id);
+  
+  // Find all open tabs in this folder and nested folders recursively
+  const openTabsInFolder = findOpenTabsRecursive(folder.id, pinnedTabs, allFolders);
+  
+  // Count includes nested folder tabs
+  const totalTabsInFolder = tabsInFolder.length;
+  const nestedFolderCount = nestedFolders.length;
   
   const folderItem = document.createElement('div');
   folderItem.className = `folder-item ${isCollapsed ? 'collapsed' : ''} ${openTabsInFolder.length > 0 && isCollapsed ? 'has-open-tabs' : ''}`;
@@ -1049,7 +1076,10 @@ function createFolderElement(folder, pinnedTabs) {
   
   const folderCount = document.createElement('span');
   folderCount.className = 'folder-count';
-  folderCount.textContent = `(${tabsInFolder.length})`;
+  const countText = nestedFolderCount > 0 
+    ? `(${totalTabsInFolder}${nestedFolderCount > 0 ? `, ${nestedFolderCount} folder${nestedFolderCount !== 1 ? 's' : ''}` : ''})`
+    : `(${totalTabsInFolder})`;
+  folderCount.textContent = countText;
   
   folderHeader.appendChild(folderIcon);
   folderHeader.appendChild(folderName);
@@ -1115,6 +1145,13 @@ function createFolderElement(folder, pinnedTabs) {
     }
   });
   
+  // Render nested folders first
+  nestedFolders.forEach(nestedFolder => {
+    const nestedFolderElement = createFolderElement(nestedFolder, pinnedTabs, allFolders);
+    folderContents.appendChild(nestedFolderElement);
+  });
+  
+  // Then render tabs in this folder
   tabsInFolder.forEach(pinnedTab => {
     const tabItem = createTabItem(pinnedTab, 'pinned', pinnedTab.id);
     folderContents.appendChild(tabItem);
@@ -1122,8 +1159,8 @@ function createFolderElement(folder, pinnedTabs) {
   
   folderItem.appendChild(folderContents);
   
-  // If folder is collapsed but has open tabs, show those tabs outside the folder contents
-  // This keeps open tabs visible even when the folder is collapsed
+  // If folder is collapsed but has open tabs (including in nested folders), show those tabs outside the folder contents
+  // This keeps open tabs visible even when the folder is collapsed, including tabs from nested folders
   if (isCollapsed && openTabsInFolder.length > 0) {
     const openTabsPreview = document.createElement('div');
     openTabsPreview.className = 'open-tabs-preview';
@@ -2479,7 +2516,18 @@ function renderImportFolderSelection(bookmarks) {
     folderItem.className = 'import-folder-item';
     
     const tabCount = countTabsInWorkspace(ws);
-    const folderCount = ws.folders.length;
+    
+    // Count folders recursively (including nested folders)
+    function countFoldersRecursive(folders) {
+      let count = folders.length;
+      folders.forEach(f => {
+        if (f.folders && f.folders.length > 0) {
+          count += countFoldersRecursive(f.folders);
+        }
+      });
+      return count;
+    }
+    const folderCount = countFoldersRecursive(ws.folders);
 
     folderItem.innerHTML = `
       <input type="checkbox" id="import-folder-${index}" ${selectedImportFolders.has(index) ? 'checked' : ''}>
@@ -2526,10 +2574,18 @@ function toggleFolderSelection(index, selected, bookmarks) {
   updateImportPreview();
 }
 
-// Count total tabs in a workspace
+// Count total tabs in a workspace (recursively including nested folders)
 function countTabsInWorkspace(ws) {
   let count = ws.tabs.length;
-  ws.folders.forEach(f => count += f.tabs.length);
+  
+  function countFolderTabs(folder) {
+    count += folder.tabs.length;
+    if (folder.folders) {
+      folder.folders.forEach(nestedFolder => countFolderTabs(nestedFolder));
+    }
+  }
+  
+  ws.folders.forEach(f => countFolderTabs(f));
   return count;
 }
 
@@ -2612,13 +2668,15 @@ function parseBookmarkFolder(dl, folders, tabs, result) {
         // This is a subfolder
         const folder = {
           name: h3.textContent.trim(),
-          tabs: []
+          tabs: [],
+          folders: []
         };
         
-        // Parse folder contents - only get direct tab children, nested folders become flat
-        parseFolderContents(innerDL, folder.tabs, result);
+        // Recursively parse folder contents (tabs and nested folders)
+        parseFolderContents(innerDL, folder.tabs, folder.folders, result);
         
-        if (folder.tabs.length > 0) {
+        // Only add folder if it has content (tabs or subfolders)
+        if (folder.tabs.length > 0 || folder.folders.length > 0) {
           folders.push(folder);
           result.totalFolders++;
         }
@@ -2634,8 +2692,8 @@ function parseBookmarkFolder(dl, folders, tabs, result) {
   }
 }
 
-// Parse folder contents (tabs and nested folders)
-function parseFolderContents(dl, tabs, result) {
+// Parse folder contents (tabs and nested folders) - recursively
+function parseFolderContents(dl, tabs, folders, result) {
   const items = dl.children;
   
   for (const item of items) {
@@ -2645,9 +2703,23 @@ function parseFolderContents(dl, tabs, result) {
       const anchor = item.querySelector(':scope > a');
       
       if (h3 && innerDL) {
-        // Nested folder - add its contents as tabs (flatten)
-        parseFolderContents(innerDL, tabs, result);
+        // Nested folder - create it and parse recursively
+        const nestedFolder = {
+          name: h3.textContent.trim(),
+          tabs: [],
+          folders: []
+        };
+        
+        // Recursively parse nested folder contents
+        parseFolderContents(innerDL, nestedFolder.tabs, nestedFolder.folders, result);
+        
+        // Only add nested folder if it has content
+        if (nestedFolder.tabs.length > 0 || nestedFolder.folders.length > 0) {
+          folders.push(nestedFolder);
+          result.totalFolders++;
+        }
       } else if (anchor) {
+        // This is a bookmark
         tabs.push({
           title: anchor.textContent.trim(),
           url: anchor.getAttribute('href') || ''
@@ -2781,24 +2853,9 @@ async function importAsWorkspaces(selectedWorkspaces) {
       openTabsSnapshot: []
     };
 
-    // Create folders and their tabs (folder names stay as-is, not prefixed)
+    // Create folders and their tabs (recursively handle nested folders)
     for (const folder of ws.folders) {
-      const folderId = `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      workspace.folders.push({
-        id: folderId,
-        name: folder.name, // Just the folder name, not "WorkspaceName - FolderName"
-        tabs: []
-      });
-
-      // Add tabs to folder
-      for (const tab of folder.tabs) {
-        const pinnedTab = createPinnedTabFromBookmark(tab, folderId);
-        workspace.pinnedTabs.push(pinnedTab);
-      }
-
-      // Small delay to ensure unique IDs
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await importFolderRecursively(folder, workspace, null);
     }
 
     // Add root-level tabs (tabs directly under the workspace, not in any folder)
@@ -2837,24 +2894,9 @@ async function importToCurrentWorkspace(selectedWorkspaces) {
   if (!workspace.folders) workspace.folders = [];
 
   for (const ws of selectedWorkspaces) {
-    // Create folders from imported workspaces
-    // Folder names stay as-is (not prefixed with workspace name)
+    // Create folders from imported workspaces (recursively handle nested folders)
     for (const folder of ws.folders) {
-      const folderId = `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      workspace.folders.push({
-        id: folderId,
-        name: folder.name, // Just the folder name
-        tabs: []
-      });
-
-      // Add tabs to folder
-      for (const tab of folder.tabs) {
-        const pinnedTab = createPinnedTabFromBookmark(tab, folderId);
-        workspace.pinnedTabs.push(pinnedTab);
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1));
+      await importFolderRecursively(folder, workspace, null);
     }
 
     // Add workspace root tabs directly to root (not in a folder)
@@ -2882,6 +2924,33 @@ async function importAsFavorites(selectedWorkspaces) {
       favorites.push(favorite);
     }
   }
+}
+
+// Recursively import a folder and its nested folders
+async function importFolderRecursively(folder, workspace, parentFolderId) {
+  const folderId = `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  workspace.folders.push({
+    id: folderId,
+    name: folder.name,
+    parentFolderId: parentFolderId || null
+  });
+
+  // Add tabs to this folder
+  for (const tab of folder.tabs) {
+    const pinnedTab = createPinnedTabFromBookmark(tab, folderId);
+    workspace.pinnedTabs.push(pinnedTab);
+  }
+
+  // Recursively import nested folders
+  if (folder.folders && folder.folders.length > 0) {
+    for (const nestedFolder of folder.folders) {
+      await importFolderRecursively(nestedFolder, workspace, folderId);
+    }
+  }
+
+  // Small delay to ensure unique IDs
+  await new Promise(resolve => setTimeout(resolve, 1));
 }
 
 // Create pinned tab from bookmark data
