@@ -63,6 +63,7 @@
     <div class="context-menu-item" data-action="move-to-folder">Move to Folder...</div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" data-action="update-saved">Update Saved URL</div>
+    <div class="context-menu-item" data-action="edit-saved">Edit Saved URL...</div>
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" data-action="close">Close Tab</div>
     <div class="context-menu-item danger" data-action="remove">Remove from List</div>
@@ -114,6 +115,18 @@
       <div class="modal-buttons">
         <button id="move-folder-cancel-btn" class="modal-btn cancel">Cancel</button>
         <button id="move-folder-confirm-btn" class="modal-btn confirm">Move</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Saved URL Modal -->
+  <div id="edit-url-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Edit Saved URL</h3>
+      <input type="text" id="edit-url-input" placeholder="Enter URL" style="width: 100%; padding: 8px 12px; background-color: #1a1a1a; border: 1px solid #404040; border-radius: 4px; color: #e0e0e0; font-size: 14px; margin-bottom: 16px; outline: none; font-family: monospace;">
+      <div class="modal-buttons">
+        <button id="edit-url-cancel-btn" class="modal-btn cancel">Cancel</button>
+        <button id="edit-url-confirm-btn" class="modal-btn confirm">Save</button>
       </div>
     </div>
   </div>
