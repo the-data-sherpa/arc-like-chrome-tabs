@@ -17,6 +17,7 @@ let seenFolderIds = new Set(); // Track which folders we've seen to avoid re-col
 let folderModalMode = 'create'; // 'create' or 'rename'
 let folderToEdit = null;
 let tabToMove = null;
+let urlToEdit = null;
 
 // Workspace management state
 let workspaceModalMode = 'create'; // 'create' or 'rename'
@@ -450,6 +451,43 @@ function setupEventListeners() {
     }
   });
 
+  // Edit URL Modal
+  const editUrlModal = document.getElementById('edit-url-modal');
+  const editUrlInput = document.getElementById('edit-url-input');
+  const editUrlCancelBtn = document.getElementById('edit-url-cancel-btn');
+  const editUrlConfirmBtn = document.getElementById('edit-url-confirm-btn');
+
+  editUrlCancelBtn.addEventListener('click', () => {
+    editUrlModal.classList.add('hidden');
+    editUrlInput.value = '';
+    urlToEdit = null;
+  });
+
+  editUrlConfirmBtn.addEventListener('click', async () => {
+    const newUrl = editUrlInput.value.trim();
+    if (newUrl && urlToEdit) {
+      await saveEditedUrl(urlToEdit.target, urlToEdit.type, newUrl);
+      editUrlModal.classList.add('hidden');
+      editUrlInput.value = '';
+      urlToEdit = null;
+      renderUI();
+    }
+  });
+
+  editUrlModal.addEventListener('click', (e) => {
+    if (e.target === editUrlModal) {
+      editUrlModal.classList.add('hidden');
+      editUrlInput.value = '';
+      urlToEdit = null;
+    }
+  });
+
+  editUrlInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      editUrlConfirmBtn.click();
+    }
+  });
+
   // Folder context menu
   const folderContextMenu = document.getElementById('folder-context-menu');
   folderContextMenu.addEventListener('click', async (e) => {
@@ -526,11 +564,12 @@ function updateContextMenuItems(type) {
   const favoriteItem = document.querySelector('[data-action="favorite"]');
   const moveToFolderItem = document.querySelector('[data-action="move-to-folder"]');
   const updateSavedItem = document.querySelector('[data-action="update-saved"]');
+  const editSavedItem = document.querySelector('[data-action="edit-saved"]');
   const closeItem = document.querySelector('[data-action="close"]');
   const removeItem = document.querySelector('[data-action="remove"]');
   
   // Reset all items
-  [pinItem, favoriteItem, moveToFolderItem, updateSavedItem, closeItem, removeItem].forEach(item => {
+  [pinItem, favoriteItem, moveToFolderItem, updateSavedItem, editSavedItem, closeItem, removeItem].forEach(item => {
     if (item) item.classList.remove('disabled');
   });
   
@@ -542,8 +581,9 @@ function updateContextMenuItems(type) {
     favoriteItem.classList.add('disabled');
     if (moveToFolderItem) moveToFolderItem.classList.add('disabled');
   } else if (type === 'normal') {
-    // Normal tab - disable update saved and move to folder (not applicable)
+    // Normal tab - disable update saved, edit saved, and move to folder (not applicable)
     updateSavedItem.classList.add('disabled');
+    if (editSavedItem) editSavedItem.classList.add('disabled');
     if (moveToFolderItem) moveToFolderItem.classList.add('disabled');
   }
 }
@@ -562,6 +602,9 @@ async function handleContextMenuAction(action) {
     case 'update-saved':
       await updateSavedUrl(contextMenuTarget, contextMenuType);
       break;
+    case 'edit-saved':
+      showEditUrlModal(contextMenuTarget, contextMenuType);
+      return; // Don't render UI yet, wait for modal
     case 'move-to-folder':
       showMoveToFolderModal(contextMenuTarget.itemId, contextMenuType);
       return; // Don't render UI yet, wait for modal
@@ -788,6 +831,62 @@ async function updateSavedUrl(target, type) {
     favorite.savedUrl = tab.url;
     favorite.title = tab.title;
     favorite.favicon = tab.favIconUrl || favorite.favicon;
+    
+    await chrome.storage.local.set({ favorites });
+  }
+}
+
+// Show edit URL modal
+function showEditUrlModal(target, type) {
+  let currentUrl = '';
+  
+  if (type === 'pinned') {
+    const workspace = workspaces[currentWorkspace];
+    if (!workspace) return;
+    
+    const pinnedTab = workspace.pinnedTabs.find(pt => pt.id === target.itemId);
+    if (!pinnedTab) return;
+    currentUrl = pinnedTab.savedUrl || '';
+  } else if (type === 'favorite') {
+    const favorite = favorites.find(f => f.id === target.itemId);
+    if (!favorite) return;
+    currentUrl = favorite.savedUrl || '';
+  }
+  
+  urlToEdit = { target, type };
+  const editUrlInput = document.getElementById('edit-url-input');
+  const editUrlModal = document.getElementById('edit-url-modal');
+  
+  editUrlInput.value = currentUrl;
+  editUrlModal.classList.remove('hidden');
+  editUrlInput.focus();
+  editUrlInput.select();
+}
+
+// Save edited URL
+async function saveEditedUrl(target, type, newUrl) {
+  // Basic URL validation - ensure it starts with http:// or https://
+  let urlToSave = newUrl.trim();
+  if (urlToSave && !urlToSave.match(/^https?:\/\//i)) {
+    // If it doesn't start with http:// or https://, add https://
+    urlToSave = 'https://' + urlToSave;
+  }
+  
+  if (type === 'pinned') {
+    const workspace = workspaces[currentWorkspace];
+    if (!workspace) return;
+    
+    const pinnedTab = workspace.pinnedTabs.find(pt => pt.id === target.itemId);
+    if (!pinnedTab) return;
+    
+    pinnedTab.savedUrl = urlToSave;
+    
+    await chrome.storage.local.set({ workspaces });
+  } else if (type === 'favorite') {
+    const favorite = favorites.find(f => f.id === target.itemId);
+    if (!favorite) return;
+    
+    favorite.savedUrl = urlToSave;
     
     await chrome.storage.local.set({ favorites });
   }
